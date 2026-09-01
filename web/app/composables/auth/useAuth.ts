@@ -19,7 +19,14 @@ export function useAuth() {
   const refs = storeToRefs(store)
 
   function apiBase(): string {
-    return String(config.public.apiBase || '')
+    const configured = String(config.public.apiBase || '')
+    if (configured) {
+      return configured
+    }
+    if (import.meta.dev) {
+      return 'http://localhost:8080'
+    }
+    return ''
   }
 
   function client() {
