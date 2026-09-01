@@ -1,133 +1,68 @@
 import { storeToRefs } from 'pinia'
+import type { ProfileInput } from './account'
 import {
-  deriveStatus,
-  validateProfile,
-  type ProfileInput
-} from './account'
+  completeAuthCallback,
+  deactivateAccount,
+  hydrateAccount,
+  logoutAccount,
+  resolveApiBase,
+  saveAccountProfile
+} from './actions'
 import { googleStartUrl } from './api'
-import { AuthRequestError, createAccountClient } from './client'
+import { createAccountClient } from './client'
 import {
   browserStorage,
   parseAuthQuery,
-  writeAccessToken
+  type TokenStorage
 } from './session'
 import { useAccountStore } from '../../stores/auth/account'
 
+const emptyStorage: TokenStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {}
+}
+
 export function useAuth() {
   const store = useAccountStore()
-  const config = useRuntimeConfig()
   const refs = storeToRefs(store)
-
-  function apiBase(): string {
-    const configured = String(config.public.apiBase || '')
-    if (configured) {
-      return configured
-    }
-    if (import.meta.dev) {
-      return 'http://localhost:8080'
-    }
-    return ''
-  }
-
-  function client() {
-    const storage = browserStorage()
-    if (!storage) {
-      throw new Error('no_storage')
-    }
-    return createAccountClient({
-      apiBase: apiBase(),
-      storage,
-      fetch: (input, init) => globalThis.fetch(input, init)
-    })
-  }
-
-  async function hydrate() {
-    const storage = browserStorage()
-    if (!storage) {
-      return
-    }
-    store.setPending(true)
-    try {
-      const me = await client().fetchMe()
-      if (deriveStatus(me) === 'deactivated') {
-        writeAccessToken(storage, null)
-        store.clear()
-        store.setErrorKey('auth.error.deactivated')
-        return
-      }
-      store.setAccount(me)
-      store.setErrorKey(null)
-    } catch {
-      store.clear()
-    } finally {
-      store.setPending(false)
-    }
-  }
-
-  function startGoogle() {
-    return navigateTo(googleStartUrl(apiBase()), { external: true })
-  }
-
-  async function completeCallback(query: Record<string, unknown>) {
-    const parsed = parseAuthQuery(query)
-    const storage = browserStorage()
-    if (parsed.error) {
-      store.setErrorKey('auth.callback.error')
-      return parsed
-    }
-    if (parsed.accessToken && storage) {
-      writeAccessToken(storage, parsed.accessToken)
-    }
-    await hydrate()
-    return parsed
-  }
-
-  async function saveProfile(input: ProfileInput) {
-    const checked = validateProfile(input)
-    if (!checked.ok) {
-      store.setErrorKey('auth.profile.required')
-      return checked
-    }
-    store.setPending(true)
-    try {
-      store.setAccount(await client().saveProfile(checked.value))
-      store.setErrorKey(null)
-      return checked
-    } catch (error) {
-      const deactivated = error instanceof AuthRequestError && error.status === 403
-      store.setErrorKey(deactivated ? 'auth.error.deactivated' : 'auth.error.generic')
-      return { ok: false as const, errors: ['displayName' as const] }
-    } finally {
-      store.setPending(false)
-    }
-  }
-
-  async function logout() {
-    try {
-      await client().logout()
-    } catch {
-      const storage = browserStorage()
-      if (storage) {
-        writeAccessToken(storage, null)
-      }
-    }
-    store.clear()
-    await navigateTo('/')
-  }
-
-  async function deactivate() {
-    await client().deactivate()
-    store.clear()
-    await navigateTo('/')
-  }
-
+  const run = () => bindAccount(store, useRuntimeConfig())
   return {
     ...refs,
-    hydrate,
-    startGoogle,
-    completeCallback,
-    saveProfile,
-    logout,
-    deactivate
+    hydrate: () => run().hydrate(),
+    startGoogle: () => run().startGoogle(),
+    completeCallback: (query: Record<string, unknown>) => run().completeCallback(query),
+    saveProfile: (input: ProfileInput) => run().saveProfile(input),
+    logout: () => run().logout(),
+    deactivate: () => run().deactivate()
+  }
+}
+
+function bindAccount(
+  store: ReturnType<typeof useAccountStore>,
+  config: { public: { apiBase: string } }
+) {
+  const apiBase = resolveApiBase(String(config.public.apiBase || ''), import.meta.dev)
+  const storage = browserStorage() ?? emptyStorage
+  const client = createAccountClient({
+    apiBase,
+    storage,
+    fetch: (input, init) => globalThis.fetch(input, init)
+  })
+  return {
+    hydrate: () => hydrateAccount(store, client, storage),
+    startGoogle: () => navigateTo(googleStartUrl(apiBase), { external: true }),
+    completeCallback: (query: Record<string, unknown>) => {
+      return completeAuthCallback(store, client, storage, parseAuthQuery(query))
+    },
+    saveProfile: (input: ProfileInput) => saveAccountProfile(store, client, input),
+    logout: async () => {
+      await logoutAccount(store, client, storage)
+      await navigateTo('/')
+    },
+    deactivate: async () => {
+      await deactivateAccount(store, client)
+      await navigateTo('/')
+    }
   }
 }

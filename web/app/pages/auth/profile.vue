@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { guestRedirectTarget, sessionView } from '~/composables/auth/gate'
 import { useAuth } from '~/composables/auth/useAuth'
 
 defineOptions({ name: 'AuthProfilePage' })
@@ -24,10 +25,16 @@ const crumbs = computed(() => [
   { label: t('breadcrumb.account') }
 ])
 
+const view = computed(() => sessionView({
+  authenticated: isAuthenticated.value,
+  pending: pending.value
+}))
+
 onMounted(async () => {
   await hydrate()
-  if (!isAuthenticated.value) {
-    await navigateTo('/auth/login')
+  const target = guestRedirectTarget(view.value, true)
+  if (target) {
+    await navigateTo(target)
     return
   }
   state.displayName = account.value?.displayName ?? ''
@@ -51,7 +58,10 @@ async function onSubmit() {
 </script>
 
 <template>
-  <UContainer class="py-12">
+  <UContainer
+    v-if="view === 'form'"
+    class="py-12"
+  >
     <div class="mx-auto flex max-w-md flex-col gap-8">
       <AppBreadcrumb :items="crumbs" />
       <div class="flex flex-col gap-2">

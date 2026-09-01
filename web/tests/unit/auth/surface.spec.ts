@@ -21,6 +21,15 @@ describe('auth surface', () => {
     expect(profile).not.toMatch(/UModal/)
   })
 
+  it('does not render profile or deactivate forms without a session view gate', () => {
+    const profile = readApp('pages/auth/profile.vue')
+    const deactivate = readApp('pages/auth/deactivate.vue')
+    expect(profile).toContain('v-if="view === \'form\'"')
+    expect(profile).toContain('guestRedirectTarget')
+    expect(deactivate).toContain('v-if="view === \'form\'"')
+    expect(deactivate).toContain('guestRedirectTarget')
+  })
+
   it('deactivates from a dedicated confirmation page, not a long modal', () => {
     const page = readApp('pages/auth/deactivate.vue')
     expect(page).toContain('t(\'auth.deactivate.submit\')')

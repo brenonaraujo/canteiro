@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { guestRedirectTarget, sessionView } from '~/composables/auth/gate'
 import { useAuth } from '~/composables/auth/useAuth'
 
 defineOptions({ name: 'AuthDeactivatePage' })
@@ -14,10 +15,16 @@ const crumbs = computed(() => [
   { label: t('breadcrumb.deactivate') }
 ])
 
+const view = computed(() => sessionView({
+  authenticated: isAuthenticated.value,
+  pending: pending.value
+}))
+
 onMounted(async () => {
   await hydrate()
-  if (!isAuthenticated.value) {
-    await navigateTo('/auth/login')
+  const target = guestRedirectTarget(view.value, true)
+  if (target) {
+    await navigateTo(target)
   }
 })
 
@@ -35,7 +42,10 @@ async function onDeactivate() {
 </script>
 
 <template>
-  <UContainer class="py-12">
+  <UContainer
+    v-if="view === 'form'"
+    class="py-12"
+  >
     <div class="mx-auto flex max-w-md flex-col gap-8">
       <AppBreadcrumb :items="crumbs" />
       <div class="flex flex-col gap-2">
