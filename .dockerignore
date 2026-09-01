@@ -1,0 +1,13 @@
+.git
+.github
+.harness
+harness
+web
+docs
+node_modules
+coverage
+*.out
+*.md
+.DS_Store
+.env
+.env.*

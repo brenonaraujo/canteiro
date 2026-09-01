@@ -1,0 +1,6 @@
+{
+  "health.ok": "El servicio está en línea",
+  "ready.ok": "El servicio está listo",
+  "ready.not_ready": "El servicio no está listo",
+  "error.internal": "Error interno del servidor. Intente nuevamente más tarde."
+}
