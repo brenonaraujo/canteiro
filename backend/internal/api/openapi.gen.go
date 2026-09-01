@@ -16,6 +16,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Defines values for AccountStatus.
+const (
+	Active      AccountStatus = "active"
+	Deactivated AccountStatus = "deactivated"
+	Incomplete  AccountStatus = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the AccountStatus enum.
+func (e AccountStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Deactivated:
+		return true
+	case Incomplete:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReadyResponseStatus.
 const (
 	NotReady ReadyResponseStatus = "not_ready"
@@ -32,6 +53,47 @@ func (e ReadyResponseStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Account defines model for Account.
+type Account struct {
+	Capabilities AccountCapabilities `json:"capabilities"`
+	DisplayName  string              `json:"display_name"`
+
+	// Id Account id (UUID)
+	Id     string        `json:"id"`
+	Phone  string        `json:"phone"`
+	Status AccountStatus `json:"status"`
+}
+
+// AccountStatus defines model for Account.Status.
+type AccountStatus string
+
+// AccountCapabilities defines model for AccountCapabilities.
+type AccountCapabilities struct {
+	// Publish Always false in F1 (owner onboarding is F2)
+	Publish bool `json:"publish"`
+
+	// Reserve True when profile is complete and account is active
+	Reserve bool `json:"reserve"`
+}
+
+// DeactivateAccountRequest defines model for DeactivateAccountRequest.
+type DeactivateAccountRequest struct {
+	// Confirm Example: true
+	Confirm bool `json:"confirm"`
+}
+
+// Error defines model for Error.
+type Error struct {
+	// Code Example: unauthorized
+	Code string `json:"code"`
+
+	// Message Localized human message
+	Message string `json:"message"`
+
+	// MessageKey Example: auth.unauthorized
+	MessageKey string `json:"message_key"`
 }
 
 // HealthResponse defines model for HealthResponse.
@@ -61,8 +123,50 @@ type ReadyResponse struct {
 // ReadyResponseStatus defines model for ReadyResponse.Status.
 type ReadyResponseStatus string
 
+// UpdateAccountRequest defines model for UpdateAccountRequest.
+type UpdateAccountRequest struct {
+	// DisplayName Example: Ana
+	DisplayName string `json:"display_name"`
+
+	// Phone Example: +5511999999999
+	Phone string `json:"phone"`
+}
+
+// Forbidden defines model for Forbidden.
+type Forbidden = Error
+
+// Unauthorized defines model for Unauthorized.
+type Unauthorized = Error
+
+// Unprocessable defines model for Unprocessable.
+type Unprocessable = Error
+
+// UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
+type UpdateAccountJSONRequestBody = UpdateAccountRequest
+
+// DeactivateAccountJSONRequestBody defines body for DeactivateAccount for application/json ContentType.
+type DeactivateAccountJSONRequestBody = DeactivateAccountRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetAccount Current account
+	// (GET /account)
+	GetAccount(c *gin.Context)
+	// UpdateAccount Update visible name and phone
+	// (PATCH /account)
+	UpdateAccount(c *gin.Context)
+	// DeactivateAccount Deactivate own account
+	// (POST /account/deactivate)
+	DeactivateAccount(c *gin.Context)
+	// StartGoogleAuth Start Google sign-in
+	// (GET /auth/google)
+	StartGoogleAuth(c *gin.Context)
+	// GoogleCallback Google OAuth callback
+	// (GET /auth/google/callback)
+	GoogleCallback(c *gin.Context)
+	// Logout End the current session
+	// (POST /auth/logout)
+	Logout(c *gin.Context)
 	// Healthz Liveness probe
 	// (GET /healthz)
 	Healthz(c *gin.Context)
@@ -79,6 +183,84 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// GetAccount operation middleware
+func (siw *ServerInterfaceWrapper) GetAccount(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAccount(c)
+}
+
+// UpdateAccount operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAccount(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateAccount(c)
+}
+
+// DeactivateAccount operation middleware
+func (siw *ServerInterfaceWrapper) DeactivateAccount(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeactivateAccount(c)
+}
+
+// StartGoogleAuth operation middleware
+func (siw *ServerInterfaceWrapper) StartGoogleAuth(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.StartGoogleAuth(c)
+}
+
+// GoogleCallback operation middleware
+func (siw *ServerInterfaceWrapper) GoogleCallback(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GoogleCallback(c)
+}
+
+// Logout operation middleware
+func (siw *ServerInterfaceWrapper) Logout(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.Logout(c)
+}
 
 // Healthz operation middleware
 func (siw *ServerInterfaceWrapper) Healthz(c *gin.Context) {
@@ -135,6 +317,12 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.GET(options.BaseURL+"/healthz", wrapper.Healthz)
 	router.GET(options.BaseURL+"/readyz", wrapper.Readyz)
+	router.GET(options.BaseURL+"/auth/google", wrapper.StartGoogleAuth)
+	router.GET(options.BaseURL+"/auth/google/callback", wrapper.GoogleCallback)
+	router.POST(options.BaseURL+"/auth/logout", wrapper.Logout)
+	router.GET(options.BaseURL+"/account", wrapper.GetAccount)
+	router.PATCH(options.BaseURL+"/account", wrapper.UpdateAccount)
+	router.POST(options.BaseURL+"/account/deactivate", wrapper.DeactivateAccount)
 }
 
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
@@ -142,19 +330,40 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"vFTBjts2EP2VAdvDBlAkJYsAC9223aYxkAYLe2+1kdDUWGJMcViS8tYb+GOCHvoh/rFiKHk3jt2iRdHe",
-	"CHJm+N7Mm/dJKOocWbQxiOqTCKrFTqbjG5QmtlMMjmxAvnGeHPqocQhFv9EqPeCvsnMGRSWUtBG1J5GJ",
-	"uHV8E6LXthG7TIQoYx+O42l9GrnLhMdfeu2xFtXPh7TFYxwtP6KKXHGKst7+OcIOQ5BNeqgxKK9d1GRF",
-	"Jd6SkkY/YA1t30kLh8AzoMen92vcntaZRbk0CPrFlQUOyL5g5hlbfo5f9q9aZ/uOu5LKi0xYiu+H8+Jv",
-	"NvKRkzhmd9pgLqDtivhfRTZKFfloZcdR3z/h7b0RlWhjdKEqigORfOnRks2Vob5mFsfNe93bWu5/3/9G",
-	"cPG6fFaB86QwBII3d3e3QEvu0v7zBk0OM+xAybj/bKihDAypITOb2x+JGoNAPcyi1w6hRq5U95HyuRWZ",
-	"MFrhKI8R+U+TO4YTdTRfEoHr24nIxAZ9GBCW+Yu85EhyaKXTohKXeZlfikw4Gds0j6JNa/LA5wbjqUam",
-	"GHtvA7wsS7hv0UJscWA48gUdQBq9wXxubwgDWIqgWlRrWEq11raBUS9hIMQSl1x9UotqXNMHwbMeFiHh",
-	"elmWh7GhTbCkc0arlFh8DIztsO58+tbjSlTim+LJD4rRDIqvnCDp4pjkNeNPggt910m/5SXTG7TMz3la",
-	"pt2STWAdkgtiwbFFEu4/aN3X/QCpFLoI0cvVSqt8bg8pr8pLoNiiv9cBc/jBe/Lg5NaQrANIj9CgRa8V",
-	"XFiCm9m74nYyeZbP7ZM1fBiX4wOsyBi6D3Cdfnv+Vtqmlw3CBdoMXHz+3TQDDJx9gyvZm5gEysYQhudz",
-	"c5sO3P/DsR2745mppQDW96vy8v/79R1FGBzrWC+cqP9KMKNxoufLs5Z+ZEVVUaQxtBRidVVelWK3eKx5",
-	"kj6KNUvQEgw218Ev+P/dYvdHAAAA//8=",
+	"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",
+	"+G8AAAD//w==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

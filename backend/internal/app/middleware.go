@@ -3,6 +3,7 @@ package app
 import (
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -45,5 +46,22 @@ func requestLogMiddleware(log *slog.Logger) gin.HandlerFunc {
 			"status", c.Writer.Status(),
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
+	}
+}
+
+func corsMiddleware(origin string) gin.HandlerFunc {
+	origin = strings.TrimRight(origin, "/")
+	return func(c *gin.Context) {
+		if origin != "" {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Accept-Language")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+		}
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
 	}
 }

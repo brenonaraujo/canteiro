@@ -7,24 +7,39 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/brenonaraujo/canteiro/backend/internal/api"
+	"github.com/brenonaraujo/canteiro/backend/internal/auth"
 	"github.com/brenonaraujo/canteiro/backend/internal/handler"
 	"github.com/brenonaraujo/canteiro/backend/internal/repository"
 )
 
-// ServerOpts is the HTTP process wiring. Keep product features out of F0.
-type ServerOpts struct {
+// ServerOpts is the HTTP process wiring.
+type ServerOpts struct { //nolint:govet // fieldalignment vs readable wiring
+	Logger      *slog.Logger
+	Checkers    []repository.Checker
+	Auth        *auth.API
 	ServiceName string
 	MetricsPath string
 	GinMode     string
-	Logger      *slog.Logger
-	Checkers    []repository.Checker
+	CORSOrigin  string
 }
 
-// NewRouter builds recovery, metrics, locale, health, ready and metrics scrape.
+type apiMux struct {
+	*handler.Server
+	*auth.API
+}
+
+// NewRouter builds recovery, CORS, metrics, locale, health, auth and metrics scrape.
 func NewRouter(opts ServerOpts) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Recovery(), metricsMiddleware(), localeMiddleware(), requestLogMiddleware(opts.Logger))
-	api.RegisterHandlers(r, handler.NewServer(serviceName(opts.ServiceName), opts.Checkers))
+	r.Use(gin.Recovery(), corsMiddleware(opts.CORSOrigin), metricsMiddleware(), localeMiddleware(), requestLogMiddleware(opts.Logger))
+	acc := opts.Auth
+	if acc == nil {
+		acc = auth.NewAPI(auth.Deps{})
+	}
+	api.RegisterHandlers(r, apiMux{
+		Server: handler.NewServer(serviceName(opts.ServiceName), opts.Checkers),
+		API:    acc,
+	})
 	r.GET(metricsPath(opts.MetricsPath), gin.WrapH(promhttp.Handler()))
 	return r
 }

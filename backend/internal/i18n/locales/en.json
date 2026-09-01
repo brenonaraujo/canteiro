@@ -2,5 +2,10 @@
   "health.ok": "Service is alive",
   "ready.ok": "Service is ready",
   "ready.not_ready": "Service is not ready",
-  "error.internal": "Internal server error. Please try again later."
+  "error.internal": "Internal server error. Please try again later.",
+  "auth.unauthorized": "Sign in with Google to continue.",
+  "auth.not_configured": "Google sign-in is not available.",
+  "account.invalid_profile": "Visible name and phone are required.",
+  "account.deactivated": "This account is deactivated.",
+  "account.confirm_required": "Confirm deactivation to continue."
 }
