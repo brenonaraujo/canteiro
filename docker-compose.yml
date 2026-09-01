@@ -1,8 +1,9 @@
-# Canteiro local snapshot (F0). API + Postgres + migrate one-off.
-#   cp deploy/.env.example .env
+# Canteiro local snapshot (F1). API + Postgres + migrate one-off.
+#   cp deploy/.env.example .env   # fill GOOGLE_* and SESSION_SECRET for login
 #   docker compose up -d --build
 #
-# Frontend is out of this path-scope (web/**).
+# Postgres 18: mount the volume at /var/lib/postgresql (not .../data).
+# Google credentials come from the host .env — never hardcode secrets here.
 
 name: canteiro
 
@@ -16,7 +17,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - canteiro-postgres-data:/var/lib/postgresql/data
+      - canteiro-postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -46,7 +47,7 @@ services:
     ports:
       - "${PORT:-8080}:8080"
     environment:
-      PORT: ${PORT:-8080}
+      PORT: "8080"
       DATABASE_URL: postgres://${POSTGRES_USER:-canteiro}:${POSTGRES_PASSWORD:-canteiro}@postgres:5432/${POSTGRES_DB:-canteiro}?sslmode=disable
       LOG_LEVEL: ${LOG_LEVEL:-info}
       GIN_MODE: ${GIN_MODE:-release}
@@ -54,6 +55,14 @@ services:
       SERVICE_NAME: ${SERVICE_NAME:-canteiro}
       DEFAULT_LOCALE: ${DEFAULT_LOCALE:-pt-BR}
       SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-30s}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/auth/google/callback}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3000}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-canteiro_session}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_TTL: ${SESSION_TTL:-168h}
     depends_on:
       postgres:
         condition: service_healthy
