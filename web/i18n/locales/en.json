@@ -4,7 +4,10 @@
   },
   "nav": {
     "home": "Home",
-    "highlights": "How it works"
+    "highlights": "How it works",
+    "sign_in": "Sign in",
+    "sign_out": "Sign out",
+    "account": "Account"
   },
   "locale": {
     "label": "Language",
@@ -50,5 +53,54 @@
     "not_found": "Page not found",
     "generic": "Something went wrong. Please try again.",
     "home": "Back to home"
+  },
+  "breadcrumb": {
+    "home": "Home",
+    "sign_in": "Sign in",
+    "account": "Account",
+    "deactivate": "Deactivate"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to Canteiro",
+      "description": "Use your Google account. There is no sign-up without Google in v1.",
+      "google": "Sign in with Google",
+      "google_only": "v1 identity is Google only. There is no platform password.",
+      "catalog_hint": "You can still browse the public catalog without signing in."
+    },
+    "callback": {
+      "working": "Checking your Google identity…",
+      "error": "Could not sign in with Google. Please try again."
+    },
+    "profile": {
+      "title": "Your profile",
+      "description": "Visible name and phone are required before you can book.",
+      "display_name": "Visible name",
+      "phone": "Phone",
+      "save": "Save profile",
+      "saved": "Profile saved",
+      "incomplete": "Complete profile",
+      "required": "Visible name and phone cannot be empty.",
+      "cancel": "Cancel"
+    },
+    "deactivate": {
+      "title": "Deactivate account",
+      "body": "This cannot be undone in v1. You will not sign back in with this Google identity.",
+      "listings": "Published listings leave public search.",
+      "rentals": "Rentals already in progress are not cancelled automatically.",
+      "irreversible": "I understand I cannot reactivate this account myself.",
+      "confirm": "Confirm deactivation",
+      "submit": "Deactivate account",
+      "cancel": "Keep account"
+    },
+    "status": {
+      "active": "Active account",
+      "incomplete": "Incomplete profile",
+      "deactivated": "Deactivated account"
+    },
+    "error": {
+      "generic": "Could not finish. Please try again.",
+      "deactivated": "This account is deactivated and does not reopen in v1."
+    }
   }
 }

@@ -7,7 +7,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
-      include: ['app/utils/**/*.ts', 'i18n/**/*.ts'],
+      include: [
+        'app/utils/**/*.ts',
+        'app/composables/auth/**/*.ts',
+        'i18n/**/*.ts'
+      ],
+      exclude: ['app/composables/auth/useAuth.ts'],
       reporter: ['text', 'json', 'html']
     }
   }

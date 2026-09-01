@@ -4,7 +4,10 @@
   },
   "nav": {
     "home": "Inicio",
-    "highlights": "Cómo funciona"
+    "highlights": "Cómo funciona",
+    "sign_in": "Entrar",
+    "sign_out": "Salir",
+    "account": "Cuenta"
   },
   "locale": {
     "label": "Idioma",
@@ -50,5 +53,54 @@
     "not_found": "Página no encontrada",
     "generic": "Algo salió mal. Inténtalo de nuevo.",
     "home": "Volver al inicio"
+  },
+  "breadcrumb": {
+    "home": "Inicio",
+    "sign_in": "Entrar",
+    "account": "Cuenta",
+    "deactivate": "Desactivar"
+  },
+  "auth": {
+    "login": {
+      "title": "Entrar a Canteiro",
+      "description": "Usa tu cuenta de Google. Sin Google no hay registro en v1.",
+      "google": "Entrar con Google",
+      "google_only": "En v1 la identidad es solo Google. No hay contraseña de la plataforma.",
+      "catalog_hint": "Puedes consultar el catálogo público sin entrar."
+    },
+    "callback": {
+      "working": "Validando tu identidad de Google…",
+      "error": "No fue posible entrar con Google. Inténtalo de nuevo."
+    },
+    "profile": {
+      "title": "Tu perfil",
+      "description": "El nombre visible y el teléfono son obligatorios antes de reservar.",
+      "display_name": "Nombre visible",
+      "phone": "Teléfono",
+      "save": "Guardar perfil",
+      "saved": "Perfil guardado",
+      "incomplete": "Completar perfil",
+      "required": "El nombre visible y el teléfono no pueden quedar vacíos.",
+      "cancel": "Cancelar"
+    },
+    "deactivate": {
+      "title": "Desactivar cuenta",
+      "body": "Esta acción es irreversible en v1. No volverás a entrar con esta identidad de Google.",
+      "listings": "Los anuncios publicados salen de la búsqueda pública.",
+      "rentals": "Las locaciones en curso no se cancelan automáticamente.",
+      "irreversible": "Entiendo que no puedo reactivar esta cuenta por mi cuenta.",
+      "confirm": "Confirma para desactivar",
+      "submit": "Desactivar cuenta",
+      "cancel": "Mantener cuenta"
+    },
+    "status": {
+      "active": "Cuenta activa",
+      "incomplete": "Perfil incompleto",
+      "deactivated": "Cuenta desactivada"
+    },
+    "error": {
+      "generic": "No fue posible terminar. Inténtalo de nuevo.",
+      "deactivated": "Esta cuenta fue desactivada y no se reabre en v1."
+    }
   }
 }
