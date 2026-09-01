@@ -1,0 +1,54 @@
+{
+  "common": {
+    "app_name": "Canteiro"
+  },
+  "nav": {
+    "home": "Início",
+    "highlights": "Como funciona"
+  },
+  "locale": {
+    "label": "Idioma",
+    "en": "English",
+    "pt-BR": "Português",
+    "es": "Español"
+  },
+  "a11y": {
+    "color_mode": "Alternar tema"
+  },
+  "landing": {
+    "hero": {
+      "badge": "canteiro.brenon.cloud",
+      "title": "Ferramenta parada vira obra andando",
+      "tagline": "Publique o que está ocioso. Alugue o que falta. Caução e pagamento ficam na plataforma.",
+      "cta": "Ver o que vem aí"
+    },
+    "highlights": {
+      "title": "Um marketplace, três papéis",
+      "owner": {
+        "title": "Proprietário",
+        "desc": "Anuncie furadeira, andaime ou trator. Defina preço, caução e disponibilidade."
+      },
+      "renter": {
+        "title": "Locatário",
+        "desc": "Encontre o equipamento certo, reserve o período e pague com proteção."
+      },
+      "platform": {
+        "title": "Plataforma",
+        "desc": "Orquestramos o pagamento, seguramos a caução e mediamos avaria."
+      }
+    },
+    "soon": {
+      "title": "Em construção",
+      "body": "O catálogo e as reservas vêm nas próximas entregas. Este é o endereço público do produto."
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Canteiro",
+    "host": "canteiro.brenon.cloud"
+  },
+  "error": {
+    "not_found": "Página não encontrada",
+    "generic": "Algo deu errado. Tente de novo.",
+    "home": "Voltar ao início"
+  }
+}

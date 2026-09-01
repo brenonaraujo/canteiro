@@ -1,0 +1,54 @@
+{
+  "common": {
+    "app_name": "Canteiro"
+  },
+  "nav": {
+    "home": "Inicio",
+    "highlights": "Cómo funciona"
+  },
+  "locale": {
+    "label": "Idioma",
+    "en": "English",
+    "pt-BR": "Português",
+    "es": "Español"
+  },
+  "a11y": {
+    "color_mode": "Cambiar tema"
+  },
+  "landing": {
+    "hero": {
+      "badge": "canteiro.brenon.cloud",
+      "title": "Herramienta parada, obra en marcha",
+      "tagline": "Publica lo que está ocioso. Alquila lo que falta. Fianza y pago quedan en la plataforma.",
+      "cta": "Ver lo que viene"
+    },
+    "highlights": {
+      "title": "Un marketplace, tres roles",
+      "owner": {
+        "title": "Propietario",
+        "desc": "Anuncia un taladro, andamio o tractor. Define precio, fianza y disponibilidad."
+      },
+      "renter": {
+        "title": "Locatario",
+        "desc": "Encuentra el equipo, reserva el periodo y paga con protección."
+      },
+      "platform": {
+        "title": "Plataforma",
+        "desc": "Orquestamos el pago, retenemos la fianza y mediamos averías."
+      }
+    },
+    "soon": {
+      "title": "En construcción",
+      "body": "El catálogo y las reservas llegan en entregas posteriores. Esta es la dirección pública del producto."
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Canteiro",
+    "host": "canteiro.brenon.cloud"
+  },
+  "error": {
+    "not_found": "Página no encontrada",
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "home": "Volver al inicio"
+  }
+}
