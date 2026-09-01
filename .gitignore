@@ -1,0 +1,24 @@
+# Binaries / deps
+bin/
+dist/
+node_modules/
+.nuxt/
+.output/
+vendor/
+coverage/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Go
+*.exe
+*.test
+*.out

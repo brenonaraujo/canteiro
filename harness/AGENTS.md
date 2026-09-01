@@ -1,0 +1,714 @@
+# Meta-Harness — AGENTS.md (contrato multi-tool)
+
+> Este arquivo é o **contrato** que o `team-manager` materializa nos
+> layouts nativos de cada tool suportado. Cada seção é gerada a partir
+> das personas, sensors e workflow definidos em `bootstrap.md`.
+>
+> **Versão do meta-harness:** 1.6.0 (jul/2026) — release pipeline + gmh CLI.
+> **Licença:** MIT. **Status:** stable.
+
+## Para qual tool você está lendo isto?
+
+| Tool              | Layout esperado pelo tool                                | Este arquivo vira…                       |
+|-------------------|-----------------------------------------------------------|------------------------------------------|
+| **Claude Code**   | `CLAUDE.md` na raiz                                       | `CLAUDE.md` (copie/conecte este arquivo) |
+| **Codex CLI**     | `AGENTS.md` na raiz                                       | `AGENTS.md` (já está no path correto)    |
+| **OpenCode**      | `AGENTS.md` + `.opencode/`                                | `AGENTS.md`                              |
+| **Devin CLI**     | `AGENTS.md`                                               | `AGENTS.md`                              |
+| **GitHub Copilot**| `.github/copilot-instructions.md`                         | gere a partir daqui                      |
+| **Cursor**        | `.cursorrules`                                            | gere a partir daqui                      |
+| **Hermes Agent**  | `~/.hermes/skills/<name>/SKILL.md` + `SOUL.md` por profile | gere profiles + instale as skills        |
+
+> O **`team-manager`** é o único agente que sabe gerar todos esses
+> artefatos. Os demais apenas consomem o que está materializado.
+
+---
+
+## 1. Source of truth
+
+**GitHub Issues + `harness/*` são a fonte da verdade.** Nada é decidido
+em chat que não vire issue ou commit. As personas documentam **tudo**
+no issue correspondente (comentários de status, decisões, blockers).
+
+---
+
+## 2. O time (personas)
+
+| Persona              | Quando atua                                                | O que entrega                                                                                          |
+|----------------------|------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| **team-manager**     | Em **toda** transição de estado da issue.                  | Sub-issues, labels, assignees, branches, comments de status, merge, tag, close.                        |
+| **domain-expert-`<domínio>`** | Após issue criada, antes do DoD. **Sempre especializado** (ex.: `domain-expert-banking`). | História refinada + critérios de aceite + DOR (Definition of Ready). Pode haver 1+ specialists por projeto. |
+| **solutions-architect** | Após DOR, antes da implementação.                       | DoD técnico + checklist 12-factor + decisões arquiteturais (ADR-lite).                                  |
+| **backend-engineer** | Quando a issue é `ready` + atribuição `backend`.           | Código Go + testes + Dockerfile + migration + commit na branch da feature.                              |
+| **frontend-engineer**| Quando a issue é `ready` + atribuição `frontend`.          | Código Nuxt + testes + Dockerfile + commit na branch da feature.                                       |
+| **quality-assurance**| Quando a branch está pronta (label `in-review`).           | Relatório de sensores + smoke/load + aprovação ou devolução.                                            |
+| **devops-engineer**  | Quando QA aprova (label `qa`).                             | Validação de pipeline + (se skill existir) deploy + release + tag.                                      |
+
+---
+
+## 3. Routing rules (qual persona age em qual momento)
+
+```yaml
+issue_created:
+  -> team-manager: aplica label `triage` + label de TIPO (`type/<x>`)
+  # Tipos: feature | technical | infra | bug | tech-debt | docs | spike
+  # Ver team-manager.md §4 e workflow/00-issue-lifecycle.md §0
+  # Detecta domínio (`domain/<x>`) se type/feature ou type/bug de negócio
+
+triage_done:
+  # ==== CAMINHO FEATURE / BUG DE NEGÓCIO ====
+  if type in [feature, bug] and domain/<x>:
+    -> domain-expert-<domain>: refina história + critérios de aceite
+    # domain-expert posta comentário com: história, AC, edge cases, dependências
+    # e.g.: domain-expert-banking, domain-expert-retail, domain-expert-mandai
+
+  # ==== CAMINHO TÉCNICO / INFRA / TECH-DEBT ====
+  if type in [technical, infra, tech-debt]:
+    # PULA domain-expert; vai direto para solutions-architect
+    -> (skip refined, go to ready)
+
+ready_for_tech:
+  -> solutions-architect: define DoD + checklist 12-factor
+  # solutions-architect posta: DoD checklist, decisões, riscos
+  # Valida se a estrutura segue o meta-harness (mesmo para type/infra)
+
+tech_approved:
+  -> team-manager: cria branch `feature/<id>-<slug>`, atribui, label `in-progress`
+
+in_progress:
+  if type/infra:
+    -> devops-engineer: executa (pipeline, workflow, deploy)
+  else:
+    -> backend-engineer: se issue toca backend
+    -> frontend-engineer: se issue toca frontend
+    # ambos podem trabalhar em paralelo na MESMA branch
+    # ambos escrevem testes primeiro (TDD)
+
+builders_done:
+  -> quality-assurance: roda todos os sensores + sobe snapshot + smoke/load
+  # QA posta relatório e: aprova (label `qa`) ou devolve (label `in-review` + bugs)
+
+qa_approved:
+  -> team-manager: pede validação ao usuário (snapshot URL no PR)
+  # espera comentário "validado" do usuário
+  # IMPORTANTE: team-manager ACOMPANHA ATÉ O FIM (não larga após delegar)
+
+user_validated:
+  -> devops-engineer: valida pipeline, dispara release
+  -> team-manager: merge, tag, fecha issue
+```
+
+### Smart routing — qual persona entra?
+
+> Detalhado em [`team-manager.md` §4](../personas/team-manager.md)
+> e [`workflow/00-issue-lifecycle.md` §0](./00-issue-lifecycle.md).
+
+| Tipo             | domain-expert | solutions-architect | builder | devops | qa |
+|------------------|---------------|---------------------|---------|--------|----|
+| `type/feature`   | ✅ sim        | ✅ sim              | ✅ sim  | ✅ sim | ✅ sim |
+| `type/technical` | ❌ não        | ✅ sim              | ✅ sim  | ✅ sim | ✅ sim |
+| `type/infra`     | ❌ não        | ✅ sim              | ❌ não  | ✅ sim | ✅ sim |
+| `type/bug`       | ⚠️ depende    | ✅ sim              | ✅ sim  | ✅ sim | ✅ sim |
+| `type/tech-debt` | ❌ não        | ✅ sim              | ✅ sim  | ✅ sim | ✅ sim |
+| `type/docs`      | ❌ não        | ⚠️ revisão         | ❌ não  | ❌ não | ❌ não |
+| `type/spike`     | ⚠️ depende    | ⚠️ depende         | ❌ não  | ❌ não | ❌ não |
+
+> **Regra de ouro:** o `team-manager` decide o caminho baseado no
+> **tipo** + **domínio** da issue. **Não** é "sempre passa por
+> todos" — é "só passa por quem agrega valor".
+
+---
+
+## 4. Labels canônicas (criar no repo no bootstrap)
+
+> **Sem prefixo** para reduzir ruído. Cores agrupam a categoria.
+
+| Label                  | Cor     | Significado                                            |
+|------------------------|---------|--------------------------------------------------------|
+| `triage`               | `#cccccc` | Issue nova, ainda não avaliada.                        |
+| `needs-info`           | `#fbca04` | Faltam informações do autor da issue.                  |
+| `refined`              | `#0e8a16` | `domain-expert-<domínio>` refinou a história.          |
+| `domain/<nome>`        | `#fef2c0` | Domínio da issue (ex.: `domain/banking`, `domain/retail`, `domain/mandai`). Usado pelo team-manager para rotear ao specialist correto. |
+| `type/feature`         | `#7057ff` | Feature de negócio. Entra `domain-expert-<x>` no fluxo. |
+| `type/technical`        | `#5319e7` | Setup técnico puro. **Pula** `domain-expert`. Vai direto para `solutions-architect`. |
+| `type/infra`            | `#5319e7` | Infraestrutura. **Pula** `domain-expert` e builder. Direto para `solutions-architect` → `devops-engineer`. |
+| `type/bug`              | `#b60205` | Bug. `domain-expert` entra se for bug de negócio. |
+| `type/tech-debt`        | `#fbca04` | Dívida técnica. **Pula** `domain-expert`. |
+| `type/docs`             | `#0075ca` | Documentação. Sem DoD formal. |
+| `type/spike`            | `#cccccc` | Investigação/Pesquisa. Saída: ADR. Sem código de produção. |
+| `ready`                | `#0e8a16` | `solutions-architect` definiu DoD.                      |
+| `in-progress`          | `#1d76db` | Builder está implementando.                            |
+| `in-review`            | `#1d76db` | Builder terminou, QA rodando.                          |
+| `qa`                   | `#5319e7` | QA aprovou; aguardando validação do usuário.            |
+| `done`                 | `#0e8a16` | Mergeado + release feito.                              |
+| `blocked`              | `#b60205` | Bloqueado por dependência externa.                     |
+| `wontfix`              | `#ffffff` | Não será feito.                                        |
+| `duplicate`            | `#cccccc` | Duplicado de outra issue.                              |
+| `backend`              | `#bfd4f2` | Componente backend.                                    |
+| `frontend`             | `#bfd4f2` | Componente frontend.                                   |
+| `infra`                | `#bfd4f2` | Componente infra/devops.                               |
+| `breaking-change`      | `#b60205` | Mudança incompatível.                                  |
+| `tech-debt`            | `#fbca04` | Dívida técnica (não é bug).                            |
+| `security`             | `#b60205` | Issue de segurança.                                    |
+| `documentation`        | `#0075ca` | Mudança/adição de docs.                                |
+
+---
+
+## 5. Convenções de branches e commits
+
+- **Branch:** `feature/<issue-id>-<slug-em-kebab-case>` (ou `fix/`,
+  `chore/`, `release/vX.Y.Z`).
+- **Commits:** **Conventional Commits** (`feat:`, `fix:`, `chore:`,
+  `docs:`, `refactor:`, `test:`, `ci:`). Referência à issue no rodapé:
+  `Refs #42` ou `Closes #42` quando fechar.
+
+Exemplo:
+
+```
+feat(auth): implementa login com JWT (Refs #42)
+```
+
+---
+
+## 6. PR template (mínimo obrigatório)
+
+```markdown
+## Summary
+(1 parágrafo do que foi feito)
+
+## Issue
+Closes #<id>
+
+## Changes
+- [ ] ...
+
+## Sensors (todos verdes)
+- [ ] `make lint` — OK
+- [ ] `make test` — coverage ≥ 80%
+- [ ] `govulncheck` — sem HIGH/CRITICAL
+- [ ] `trivy image` — sem CRITICAL
+- [ ] `openapi-diff` — sem breaking changes
+- [ ] `12-factor audit` — F1..F12 OK
+
+## Como testar localmente
+```bash
+docker compose -f deploy/docker-compose.yml up -d
+curl http://localhost:8080/healthz
+# UI: http://localhost:3000
+```
+
+## Screenshots / curls
+(anexar)
+
+## Riscos & rollback
+(descrever)
+```
+
+---
+
+## 7. Comandos canônicos (Makefile mínimo esperado)
+
+Todo microsserviço Go expõe estes `make` targets (ver
+[`templates/`](./templates/) para o Makefile completo):
+
+```bash
+make tidy        # go mod tidy
+make build       # go build ./...
+make test        # go test -race -coverprofile=coverage.out ./...
+make lint        # golangci-lint run --timeout=5m
+make vuln        # govulncheck ./...
+make oas         # oapi-codegen (regenera internal/api/openapi.gen.go)
+make migrate-up  # aplica migrations
+make run         # roda o serviço local
+make docker      # builda a imagem
+make compose-up  # sobe docker-compose do deploy/
+make compose-down
+```
+
+---
+
+## 8. Invariantes do meta-harness (não-violáveis)
+
+1. **Toda issue** tem 1+ commits que referenciam o número
+   (`Refs #<id>` ou `Closes #<id>`).
+2. **Todo PR** cita a issue que fecha.
+3. **Todo PR** tem o bloco "Como testar localmente" preenchido.
+4. **Todo microsserviço** expõe `/healthz`, `/readyz` e `/metrics`.
+5. **Todo microsserviço** loga em JSON via `slog`.
+6. **Nenhum microsserviço** lê config de arquivo. Só env.
+7. **Nenhum microsserviço** roda como root no container.
+8. **Nenhum microsserviço** entra em produção sem `govulncheck` verde.
+9. **Nenhum PR** é mergeado sem coverage ≥ 80% nos pacotes alterados.
+9a. **Funções ≤ 35 linhas (max) / ≤ 25 linhas (recomendado)** (v1.10.0,
+    ADR-0020). Limite duro subiu de 25 → 35 para eliminar "split for
+    compliance" (artificial decomposition só pra caber em 25 linhas).
+    Funções em 26-35 são aceitáveis **apenas se** o builder aplicou
+    a skill [`pre-implementation-design`](./skills/pre-implementation-design/SKILL.md)
+    (listou 2-3 decomosições possíveis e justificou a escolha no
+    commit message). Funções > 35 falham `funlen` no golangci-lint.
+    **Antes de implementar função não-trivial, o builder DEVE listar
+    2-3 decomposições possíveis e justificar a escolha** — pular
+    essa etapa é o anti-pattern que a skill foi criada pra eliminar.
+10. **Nenhuma issue** é fechada sem validação do usuário.
+11. **Nenhuma string de usuário é hardcoded** — toda mensagem
+    externalizada (erro de API, copy de UI, e-mail, notificação) usa
+    i18n. Idiomas obrigatórios: **en, pt-BR, es**. O sensor
+    `08-i18n-audit` valida paridade de chaves e ausência de hardcode
+    em todo PR.
+12. **Toda issue é roteada ao `domain-expert-<domínio>` correto** —
+    nunca existe um `domain-expert` genérico. A label
+    `domain/<nome>` é obrigatória na triagem (quando aplicável).
+13. **Toda issue tem label de tipo** (`type/feature`,
+    `type/technical`, `type/infra`, `type/bug`, `type/tech-debt`,
+    `type/docs`, `type/spike`) na triagem. Define quem entra no
+    fluxo.
+14. **Issue-mãe só fecha quando todas as sub-issues estão `done`** e
+    o PR foi mergeado + validado pelo usuário. O `team-manager`
+    **acompanha cada sub-issue até a conclusão** (não larga após
+    delegar).
+15. **Branches de feature/fix/chore são criadas pelo team-manager
+    e delegadas no briefing.** Quem implementa
+    (`backend-engineer`/`frontend-engineer`) **recebe o nome da
+    branch** no briefing e só clona. O team-manager **NÃO escreve
+    código de feature** — essa é a única linha vermelha
+    (orquestração inclui criar branch; engenharia é o que está
+    dentro dela). Personas **não-técnicas** (`domain-expert`,
+    `solutions-architect`, `quality-assurance`) **nunca** mencionam
+    nome de branch nem dizem a quem atribuir. Ver
+    [`personas/interactions.md`](./personas/interactions.md) e
+    ADR-0006.
+16. **Nenhum PR é aberto com CI local vermelho.** Builders rodam
+    `make lint && make test && make vuln` (Go) ou
+    `pnpm lint && pnpm typecheck && pnpm test:run && pnpm audit`
+    (Node) **antes** de `gh pr create`. QA devolve IMEDIATAMENTE
+    se o PR chegar com checks vermelhos. Team-manager **NÃO** pede
+    validação do user com CI vermelho. Ver ADR-0008.
+17. **1 Dockerfile por service, em path canônico.** Cada service do
+    monorepo tem **exatamente 1** Dockerfile em path canônico
+    documentado. Proibido:
+    - `Dockerfile` na raiz (mover para `deploy/Dockerfile.backend`
+      ou path específico do service).
+    - 2+ Dockerfiles pro mesmo service (ex.: `backend/Dockerfile`
+      E `deploy/Dockerfile.backend`).
+    Paths canônicos por padrão:
+    - **Backend Go:** `deploy/Dockerfile.backend`
+    - **Frontend Node:** `web/Dockerfile`
+    - **Migrate (12-factor XII):** usa imagem oficial
+      `migrate/migrate:v4.19.1` no compose — **NÃO** custom build
+      (gotcha #2 do `versions.md`).
+    O `check-stack-versions.sh` detecta divergência. Ver
+    ADR-0011.
+18. **CI modular com path filters.** O workflow `.github/workflows/
+    ci.yml` DEVE ter:
+    - 1 job `changes` no topo com `dorny/paths-filter@v3.0.2`
+      (SHA-pinned em prod) que computa 6+ outputs
+      (`backend`, `frontend`, `infra`, `docs`, `workflow`,
+      `contracts`).
+    - Todos os outros jobs com `needs: changes` + `if: needs.
+      changes.outputs.<X> == 'true'`. **Proibido** rodar lint
+      de Go quando o PR só muda `web/`.
+    - `concurrency` com `cancel-in-progress: ${{ github.event_name
+      == 'pull_request' }}` (cancela rodadas obsoletas em PRs;
+      nunca em main).
+    - Cache Docker com `scope=<service>` (ex.: `scope=backend`,
+      `scope=frontend`) — caches separados por service.
+    - Trivy SHA-pinado (`@0.36.0` ou SHA completo) — NUNCA
+      `@master` ou `@latest` (supply-chain risk comprovado em
+      mar/2026).
+    - `GOTOOLCHAIN= local` em todos os jobs Go (impede `go mod
+      tidy` de reescrever `go.mod` no CI).
+    - 12-Factor audit roda **sempre** (gate de segurança não
+      pode ser pulado por path filter).
+    Ver `templates/.github-workflows-ci.yml` e ADR-0011.
+19. **Team-manager verifica, não confia.** Após um builder reportar
+    "PRONTO" / "VERDE", o `team-manager` **re-executa** os
+    checks críticos (re-lê `go.mod`/`Dockerfile`/`ci.yml`,
+    roda `make lint && make test && make vuln`) **antes** de
+    rotular como `in-review` ou pedir validação humana.
+    Lição do Mandaí v2 (jul/2026, ADR-0014): um builder reportou
+    `go.mod` com `go 1.22.0` quando o arquivo continha `go 1.25.0`
+    — incoerência só foi pega pelo humano que leu o arquivo
+    diretamente. **Auto-relato de subagente é evidência fraca.**
+    Sensor [`09-verify-after-build`](./sensors/09-verify-after-build.md)
+    codifica o protocolo. Ver §11 do
+    [`personas/team-manager.md`](./personas/team-manager.md).
+20. **`domain-expert` fala em comportamento, não em UI nem em
+    tecnologia** (cercas duplas, v1.8.0).
+    - **Cerca de Design (v1.7.0)**: `domain-expert` **NÃO**
+      especifica componentes de UI (modal, botão, card, sidebar,
+      tab, dropdown, toast, slideover, drawer). Fala em
+      **comportamento do usuário** ("confirmar exclusão"), nunca
+      em **componente** ("clicar no modal"). Ver
+      [`personas/domain-expert.template.md`](./personas/domain-expert.template.md)
+      §"Cerca de Design" + skill
+      [`ux-design-best-practices`](./skills/ux-design-best-practices/SKILL.md).
+    - **Cerca Técnica (v1.8.0)**: `domain-expert` **NÃO**
+      especifica tecnologia (linguagem, framework, ORM, banco,
+      fila, protocolo, action de CI, índice de banco, Helm
+      chart). Fala em **comportamento de domínio** ("persistir
+      o usuário") ou em **SLO/SLA esperado** ("listagem
+      eficiente para 10k registros, p95 ≤ 200ms"), nunca em
+      **stack específica** ("PostgreSQL com `gorm.Model`"). ACs
+      devem sobreviver à troca de stack. Ver §"Cerca Técnica"
+      do `domain-expert.template.md` + skill
+      [`domain-refinement`](./skills/domain-refinement/SKILL.md).
+    - **Routing errado**: `domain-expert` é acionado **somente**
+      para `type/feature`, `type/bug` (de negócio) ou
+      `type/spike` (escopo de domínio). Para `type/technical`,
+      `type/infra`, `type/tech-debt`, `type/docs` ou `type/ui`
+      o `team-manager` deve **reroute imediato** (ver
+      §4.1.2 do `team-manager.md`). A skill
+      `domain-refinement` codifica a tabela de tipos e o
+      template de reroute.
+    - **Teste que toda AC deve passar**: "Se eu trocar a stack
+      inteira (Go → Rust, Nuxt → React, PostgreSQL → MongoDB,
+      REST → GraphQL, GHCR → ECR), essa AC ainda faz sentido?"
+      SIM → AC de comportamento. NÃO → AC acoplada a tech,
+      reformular.
+21. **Path-scope + depends-on obrigatórios para sub-issues em
+    paralelo** (cercas de decomposição, v1.9.0). Lição do Épico
+    #12 do Mandaí v2 (jul/2026): 6 builders rodaram em paralelo
+    no mesmo `cwd` sem checagem de overlap. Backend #13 (auth-api)
+    e #15 (user-role) ambos declararam `UserRepository` no mesmo
+    pacote (`internal/repository/`) → conflito de compilação e
+    trabalho perdido.
+    - **Toda sub-issue** (criada a partir da decomposição de uma
+      issue-mãe) **deve** ter 1+ label `path-scope: <glob>` no
+      DoD. `solutions-architect` declara no DoD, não é opcional.
+    - **Antes de disparar 2+ builders em paralelo**, o
+      `team-manager` **DEVE** rodar
+      [`./harness/scripts/check-parallel-builders.sh --ready`](../scripts/check-parallel-builders.sh)
+      (sensor 10). Exit code ≠ 0 = **bloquear** a transição
+      `ready` → `in-progress`.
+    - Se o sensor detectar **overlap** entre path-scopes, opções:
+      (a) adicionar `depends-on: #X` em uma das sub-issues
+      (serializa), (b) refatorar path-scope para ser disjunto.
+    - Sub-issue **sem path-scope** = DoD incompleto = rejeitar
+      (`needs-info` para `solutions-architect`).
+    - Sub-issue com path-scope que cobre `go.mod`, `package.json`,
+      `pnpm-lock.yaml`, ou `migrations/*.sql` = **sempre
+      serializar** (alto risco de conflito de lock file ou ordem
+      de migration).
+    - Ver
+      [`personas/solutions-architect.md`](./personas/solutions-architect.md)
+      §"Path scoping" (quem declara),
+      [`personas/team-manager.md`](./personas/team-manager.md)
+      §6 "Decomposition Safety" (quem valida),
+      [`sensors/10-decomposition-safety.md`](./sensors/10-decomposition-safety.md)
+      (protocolo).
+
+---
+
+## 9. Como cada tool consome este AGENTS.md
+
+### Claude Code
+
+```bash
+# O team-manager gera:
+cp harness/AGENTS.md CLAUDE.md
+mkdir -p .claude/agents .claude/skills .claude/commands
+# Para cada persona em harness/personas/*.md, gera .claude/agents/<name>.md
+# Para cada sensor em harness/sensors/*.md, gera .claude/skills/<name>/SKILL.md
+```
+
+### GitHub Copilot
+
+```bash
+# O team-manager gera:
+mkdir -p .github/agents
+# Gera .github/copilot-instructions.md a partir deste AGENTS.md
+# Para cada persona, gera .github/agents/<name>.md
+```
+
+### Codex CLI / OpenCode
+
+```bash
+# Já funciona: AGENTS.md na raiz é o contrato
+# Persona files podem ser copiados para .codex/agents/ ou .opencode/agents/
+```
+
+### Hermes Agent
+
+```bash
+# O team-manager gera profiles (um por persona) + skills:
+hermes profile create team-manager --description "Orquestrador do meta-harness"
+hermes profile create backend-engineer --description "..."
+# ...
+# Cada persona vira um ~/.hermes/skills/<name>/SKILL.md
+hermes skills install <path-para-harness/skills/<name>>
+```
+
+### Devin CLI / Cursor
+
+```bash
+# Devin: AGENTS.md + .devin/ configurado pelo time-manager
+# Cursor: .cursorrules gerado a partir deste arquivo
+```
+
+---
+
+## 10. Como estender o meta-harness
+
+- **Nova persona:** crie `harness/personas/<name>.md` (use
+  `team-manager.md` como template), adicione à lista em
+  `bootstrap.md` §4, e gere os artefatos nativos do tool.
+- **Novo sensor:** crie `harness/sensors/<id>-<name>.md` com comando
+  exato, exit code, thresholds e onde pluga no workflow. Adicione ao
+  CI workflow.
+- **Nova stack:** adapte `harness/stack/*.md` e `templates/*`. Não
+  remova os princípios (§2 do `bootstrap.md`).
+- **Nova regra:** adicione à §8 deste arquivo. Se for princípio
+  fundamental, promova para `bootstrap.md` §2 via ADR.
+
+22. **Scope discipline (PILARES vs BLUEPRINTS)** (v1.11.0,
+    ADR-0021). Lição do Mandaí v2 (jul/2026, Épico F4+F5 —
+    Ciclos + Pedidos): `domain-expert` e `solutions-architect`
+    escreveram **blueprints** (nomes de funções, SQL, paths,
+    ORMs) em vez de **pilares** (o que + por quê). O
+    `backend-engineer` virou executor cego, sem questionar,
+    sem otimizar, sem ownership técnica. Custo: ~3-5h de
+    retrabalho.
+    - **`domain-expert` entrega comportamento + regra** (o que +
+      por quê). **NÃO** entrega nomes de tabelas/migrations/
+      funções/paths, ORMs/bancos, SQL, endpoints HTTP, schemas
+      JSON, métricas Prometheus, pseudocódigo. Ver
+      [`personas/domain-expert.template.md`](./personas/domain-expert.template.md)
+      §"Cerca de Solução" + skill
+      [`solution-scoping`](./skills/solution-scoping/SKILL.md).
+    - **`solutions-architect` entrega 3-5 pilares** (alto nível)
+      + DoD macro (≤ 80 linhas) + 12-factor audit.
+      **NÃO** entrega nomes de funções, paths, SQL, pseudocódigo,
+      schemas OpenAPI completos, métricas específicas. Builder
+      tem **autonomia total** pra escolher o como. Ver
+      [`personas/solutions-architect.md`](./personas/solutions-architect.md)
+      §"DoD — PILARES, não BLUEPRINTS".
+    - **Sensor 11 `scope-discipline` (NOVA) detecta vazamento** via
+      regex heurística (SQL keywords, ORM names, paths, function
+      names). **NÃO bloqueia** — emite **recomendação** (warning)
+      pra encurtar na próxima iteração. Diferente dos sensors
+      04-verify e 10-decomposition-safety, este é **não-bloqueante**
+      (você decide se aceita ou pede reformulação).
+    - **Limites recomendados** (não-bloqueantes): domain-expert
+      ≤ 12 ACs, ≤ 8 edge cases, ≤ 3k tokens. Solutions-architect
+      ≤ 5 pilares, DoD ≤ 80 linhas, ≤ 5k tokens. **Acima de
+      30k tokens** (~75k chars) em qualquer um: warning.
+    - **`team-manager` (§12) roda o sensor 11** depois de cada
+      output. Se detectar vazamento sério, **pede reformulação**
+      com template (em `team-manager.md` §12.2). Se vazamento
+      leve, **aceita** e segue.
+    - Quem **aplica a skill `solution-scoping`** antes de postar:
+      domain-expert e solutions-architect (checklist pré-postar
+      em cada persona). Builder **não aplica** (sua camada
+      é livre).
+
+23. **Frontend polish (cold-start visual)** (v1.12.0,
+    ADR-0022). Lição do Mandaí v2 (jul/2026, PR #23 —
+    Redesign Landing): o `frontend-engineer` entregou UI
+    com **cores hex hardcoded** (`#10b981`, `#064e3b`),
+    **CSS BEM** misturado com Tailwind, **comentários
+    redundantes**, **emojis excessivos**, e **zero uso
+    de skills públicas** (`npx skills`). Resultado: tela
+    com cara de "W3Schools 2018" em vez de marketplace
+    profissional.
+    - **Consultar registry público ANTES de implementar**
+      (regra não-violável). Todo `frontend-engineer` PRECISA
+      rodar `npx skills find <seu-stack>` e instalar pelo
+      menos 1 skill oficial (e.g., `nuxt/ui@nuxt-ui`)
+      **antes** de escrever a primeira linha de `.vue`/`.css`.
+      Ver skill
+      [`frontend-public-skills`](./skills/frontend-public-skills/SKILL.md).
+    - **Respeitar design tokens do projeto** (sempre).
+      Zero hex hardcoded em componentes (vai no `app.config.ts`
+      ou `@theme`). Zero CSS BEM misturado com Tailwind/Nuxt
+      UI. Use **só** tokens semânticos (`color="primary"`,
+      `text-fg`, `bg-elevated`).
+    - **Screenshot local ANTES do PR** (regra não-violável).
+      Cold-start visual é uma **feature**, não polish step
+      depois. Ver
+      [`scripts/visual/playwright-screenshot.mjs`](./scripts/visual/playwright-screenshot.mjs).
+    - **Sensor 12 `frontend-polish` (NOVA) BLOQUEIA**
+      (exit 1) com 10 categorias: `hardcoded_colors`,
+      `bem_naming`, `redundant_comment`, `emojis_excessive`,
+      `spacing_off_scale`, `inline_color_style`,
+      `off_stack_imports`, `img_no_alt`, `button_no_text`,
+      `no_design_system`. Diferente do sensor 11 (que é
+      recomendação), este **BLOQUEIA** porque refactor é
+      trivial (< 5min) mas cold-start ruim custa caro.
+    - **3 templates Nuxt UI prontos** (copy-paste) em
+      [`harness/templates/nuxt-ui/`](./templates/nuxt-ui/):
+      `landing.vue`, `dashboard.vue`, `auth-form.vue`.
+      Todos com tokens semânticos, hierarchy/whitespace/
+      contrast corretos, zero emojis decorativos.
+    - **Skill `visual-polish`** codifica as técnicas
+      (hierarchy, whitespace, contrast WCAG AA, consistency,
+      motion, touch targets ≥ 44×44px).
+    - **`team-manager` (§13) e `quality-assurance` (Visual
+      Report) rodam o sensor 12 + Playwright screenshot**.
+      Se vermelho: **devolve com `in-review` + lista de
+      violações**. Se builder empurra 3x com sensor vermelho,
+      `team-manager` escala (marca `@user` no comentário).
+    - **Quem aplica `visual-polish` antes de PR**:
+      `frontend-engineer` (sempre). `team-manager` valida
+      no PR review.
+
+24. **Feature flow enforcement** (v1.13.0, ADR-0025).
+    Lição do Mandaí v2 (jul/2026, Épico #48 F7+F8+F10):
+    o `team-manager` criou o épico com `type/feature`,
+    mas **nenhuma sub-issue** foi pra `refined`
+    (domain-expert) nem pra `ready` (architect). O épico
+    inteiro foi pra builder sem refinamento. Resultado:
+    builder recebendo só a descrição da issue (sem ACs
+    nem DoD), implementando no escuro.
+    - **Toda issue `type/feature` REQUER**:
+      1. Label `refined` aplicada por `domain-expert-<x>`
+         (após postar comentário de refinamento com ACs +
+         edge cases).
+      2. Label `ready` aplicada por `solutions-architect`
+         (após postar comentário de DoD com 3-5 pilares).
+      3. Builder **ler TODOS os comentários** da issue
+         (não só a descrição) **antes de implementar**,
+         e referenciar ACs e DoD nos commits.
+    - **Sensor 13 `feature-flow` (NOVA) BLOQUEIA**
+      (exit 1) com 5 categorias: `no_refined_label`,
+      `no_ready_label`, `no_refinement_comment`,
+      `no_dod_comment`, `dod_without_refined`. Roda antes
+      de mover a label pra `in-progress` (= antes de
+      delegar pro builder).
+    - **Templates de comentário canônicos** (obrigatórios
+      em copy-paste) em
+      [`harness/templates/comments/`](./templates/comments/):
+      - `domain-expert-refinement.md` (persona, comportamento,
+        ACs, edge cases, validação).
+      - `solutions-architect-dod.md` (pilares, DoD checklist,
+        decisões, riscos, 12-factor audit).
+    - **`team-manager` (§3.1.3) roda o sensor 13 antes
+      de delegar builder**. Se vermelho: **devolve com
+      `in-progress` → `triage`** + comentário listando
+      o que falta.
+    - **Builder (`backend-engineer` e `frontend-engineer`)
+      regra explícita**: **ler todos os comentários da
+      issue** antes de codar. PR template exige seção
+      "Context from domain-expert" + "DoD from architect"
+      com referência aos IDs dos comentários.
+
+---
+
+> Este arquivo é **vivo**: o `team-manager` é responsável por mantê-lo
+> sincronizado com `bootstrap.md` e os artefatos nativos do tool em uso.
+
+---
+
+## 11. Adaptive harness + métricas (v1.14.0, ADRs 0026-0029)
+
+> **Filosofia (v1.14.0+):** "The harness adapts to the project,
+> not the other way around." O meta-harness agora suporta
+> projetos em andamento (`gmh adopt`), bootstrap a partir de
+> spec (`gmh new --spec`), e mede saúde continuamente
+> (`gmh metrics`).
+
+### 25. **`gmh adopt` para projetos em andamento** (NOVA,
+    v1.14.0+, não-violável + bloqueante)
+
+- Projetos pré-existentes (com stack, conventions, 1k-50k+ LOC)
+  **devem usar `gmh adopt`** em vez de `gmh install`. `gmh install`
+  assume greenfield; `gmh adopt` detecta stack e adapta.
+- `gmh adopt` gera `harness/ADOPT-REPORT.md` com stack detectado
+  + adaptações aplicadas. Nunca modifica código do projeto.
+- Persona `domain-expert-adopter` (NOVA) orquestra a adaptação
+  (cria `domain-expert-<domínio>.md` calibrado, sugere skills,
+  documenta edge cases).
+- Em CI: `gmh adopt --non-interactive` (sem prompts) é o modo
+  default.
+- **Bloqueante**: se `harness/ADOPT-REPORT.md` não existe em
+  projeto que não tem `harness/AGENTS.md` E tem >30 arquivos
+  source, sensor 14 (futuro, v1.15.0) bloqueia.
+
+### 26. **`gmh new --spec` para greenfield** (NOVA, v1.14.0+,
+    não-violável + bloqueante)
+
+- Projetos novos (greenfield) **devem usar `gmh new <name>
+  --spec <spec.md>`** em vez de bootstrap manual.
+- `gmh new` gera: `docs/SPEC.md`, `harness/TODO.md`,
+  `harness/TODO.json`, `harness/SPEC-COVERAGE.md`,
+  `harness/ADOPT-REPORT.md`, e estrutura básica de diretório.
+- Spec decomposition segue a skill `spec-decomposition`
+  (1 épico = 1 capítulo, 1 sub-issue = 1 entregável testável,
+  ACs derivados, edge cases extraídos, SpecRef linkando).
+- Coverage check: `harness/SPEC-COVERAGE.md` deve mostrar 100%
+  (toda seção da spec → ≥1 épico). Se <100%, **bloqueante**
+  (sensor 15 futuro, v1.15.0).
+
+### 27. **Health score é medido e versionado** (NOVA, v1.14.0+,
+    não-violável)
+
+- `gmh doctor --json` produz `health_score` 0-100 (4 dimensões:
+  harness × 2, agents × 1, skills × 1, sensors × 2).
+- Thresholds: 90-100 healthy, 80-89 needs attention, 70-79
+  needs work, <70 critical.
+- `gmh metrics` produz dashboard Prometheus + alertas
+  configuráveis (saúde caindo, flow compliance, drift).
+- Em CI: `--strict` (exit 1 se health <70) é o modo
+  recomendado para projetos maduros.
+- **Não-violável**: health score **deve** ser consultado
+  semanalmente (review do time). Não seguir = não detectar
+  drift até quebrar.
+
+### 28. **Comparação com ecossistema 2026 é referenciada** (NOVA,
+    v1.14.0+, informativa)
+
+- 4 implementações de meta-harness em 2026:
+  Stanford IRIS (research, otimiza), SuperagenticAI
+  (código, backend Python), Towards AI (artigo, explica),
+  git-meta-harness (operacional, governa).
+- [`docs/ECOSYSTEM.md`](./../docs/ECOSYSTEM.md) tem o mapa
+  completo + 3 possíveis "bridges" (Stanford IRIS LLM-as-optimizer
+  → otimizar personas; SuperagenticAI → runtime alternativo;
+  Towards AI → scenarios fintech/healthtech).
+- **Não-violável**: visitantes que perguntam "qual a diferença?"
+  são apontados para `docs/COMPARISON.md` e `docs/ECOSYSTEM.md`.
+- **Informativa**: bridges não são obrigatórias, mas estão
+  mapeadas para v2.0.0.
+
+
+---
+
+## 12. **NUNCA forçar stack ou história** (v1.14.1+, NÃO-VIOLÁVEL + BLOQUEANTE)
+
+> **Lição do gap (v1.14.0):** ao detectar stack, framework
+> **NUNCA** deve forçar o projeto a mudar de framework/database.
+> Se detectou React, não sugere Nuxt. Se detectou Firebase, não
+> sugere PostgreSQL. Personas adaptadas **respeitam a história**
+> do projeto (não inventam terminologia regional — Pix-first só
+> se BR; Stripe se internacional).
+
+### 29. **`gmh adopt` NUNCA força; sempre pergunta** (NOVA,
+    v1.14.1+, não-violável + bloqueante)
+
+- **NUNCA** sobrescrever o stack detectado. Adicionar APOIO,
+  não substituir.
+- **NUNCA** recomendar skills que não existem em `harness/skills/`.
+- **NUNCA** aplicar "Pix-first" / "BR" / "Stripe" sem evidência
+  (locale, deps, or domain).
+- **SEMPRE** consultar `harness/skill-matrix.yaml` antes de
+  recomendar (declarativo, editável, não hardcoded em Go).
+- **SEMPRE** exibir confiança por adaptação em ADOPT-REPORT.md
+  (≥70%: aplica; 50-69%: pede confirmação; <50%: NÃO aplica,
+  apenas sugere).
+- **SEMPRE** gerar ADOPT-REPORT.md com seção "Adaptações NÃO
+  aplicadas" listando o que **não** foi feito (e por quê).
+- **Bloqueante**: `gmh loop doctor` / sensor 14 (loop-liveness,
+  v1.16.0) deve passar antes de despachar builder. Adaptação
+  com baixa confiança continua em ADOPT-REPORT.md, não neste
+  sensor.
+
+### 30. **Skill matrix é a fonte da verdade** (NOVA, v1.14.1+,
+    não-violável)
+
+- Stack → skills é mapeado em `harness/skill-matrix.yaml`,
+  NUNCA hardcoded em Go code.
+- Personas consultam a skill matrix; nunca inventam.
+- Adicionar nova stack = 1 entrada na skill matrix, não 50
+  linhas de Go.
+- Editável pelo time: mudanças no YAML são versionadas com o
+  harness.
+
