@@ -62,12 +62,8 @@ formatters:
     - gofmt
     - goimports
   exclusions:
-    warn-unused: true
-    rules:
-      - path: internal/api/openapi\.gen\.go
-        linters:
-          - gofmt
-          - goimports
+    paths:
+      - internal/api/openapi\.gen\.go
 
 issues:
   max-issues-per-linter: 0

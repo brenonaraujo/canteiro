@@ -2,16 +2,16 @@
 #
 # Multi-stage, distroless, non-root. Context = repo root.
 #   docker build -f deploy/Dockerfile.backend -t canteiro-backend:dev .
+#
+# Cache mounts live only during RUN. Do not COPY /go/pkg/mod from a
+# stage that downloaded modules into a cache mount — the path is empty
+# in the image layer (CI: "failed to calculate checksum ... not found").
 
-FROM golang:1.26.5-alpine AS deps
+FROM golang:1.26.5-alpine AS builder
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download && go mod verify
-
-FROM golang:1.26.5-alpine AS builder
-WORKDIR /src
-COPY --from=deps /go/pkg/mod /go/pkg/mod
 COPY backend/ ./
 ARG VERSION=dev
 ARG COMMIT=unknown
