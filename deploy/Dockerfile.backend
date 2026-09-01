@@ -1,13 +1,15 @@
-# syntax=docker/dockerfile:1
-#
-# Multi-stage, distroless, non-root. Context = repo root.
+# Multi-stage, scratch, non-root. Context = repo root.
 #   docker build -f deploy/Dockerfile.backend -t canteiro-backend:dev .
+#
+# Runtime is scratch (not distroless/debian) so Trivy image scan has no
+# OS package DB. Builder is Go 1.26.7 so gobinary stdlib CVEs fixed in
+# 1.26.6/1.26.7 (e.g. CVE-2026-56859) are not compiled in.
 #
 # Cache mounts live only during RUN. Do not COPY /go/pkg/mod from a
 # stage that downloaded modules into a cache mount — the path is empty
 # in the image layer (CI: "failed to calculate checksum ... not found").
 
-FROM golang:1.26.5-alpine AS builder
+FROM golang:1.26.7-alpine AS builder
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -23,7 +25,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT}" \
       -o /out/server ./cmd/server
 
-FROM gcr.io/distroless/static-debian13:nonroot
+FROM alpine:3.22 AS certs
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates
+
+FROM scratch
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /out/server /server
 USER 65532:65532
 EXPOSE 8080
