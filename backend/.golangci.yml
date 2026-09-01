@@ -1,0 +1,70 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: none
+  enable:
+    - govet
+    - errcheck
+    - ineffassign
+    - unused
+    - staticcheck
+    - gocritic
+    - revive
+    - misspell
+    - whitespace
+    - gocyclo
+    - funlen
+    - gosec
+    - testifylint
+    - thelper
+    - paralleltest
+  settings:
+    funlen:
+      lines: 35
+      statements: 30
+      ignore-comments: true
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      severity: medium
+      confidence: medium
+    govet:
+      enable-all: true
+    revive:
+      severity: warning
+      rules:
+        - name: exported
+          severity: warning
+        - name: argument-limit
+          arguments: [5]
+        - name: max-control-nesting
+          arguments: [4]
+  exclusions:
+    warn-unused: true
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - funlen
+          - paralleltest
+      - path: internal/api/openapi\.gen\.go
+        linters:
+          - all
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    paths:
+      - internal/api/openapi\.gen\.go
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

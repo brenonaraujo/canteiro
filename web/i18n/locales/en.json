@@ -1,0 +1,54 @@
+{
+  "common": {
+    "app_name": "Canteiro"
+  },
+  "nav": {
+    "home": "Home",
+    "highlights": "How it works"
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "pt-BR": "Português",
+    "es": "Español"
+  },
+  "a11y": {
+    "color_mode": "Toggle color mode"
+  },
+  "landing": {
+    "hero": {
+      "badge": "canteiro.brenon.cloud",
+      "title": "Idle tools, working jobs",
+      "tagline": "List what sits unused. Rent what you need. Deposit and payment stay on the platform.",
+      "cta": "See what's coming"
+    },
+    "highlights": {
+      "title": "One marketplace, three roles",
+      "owner": {
+        "title": "Owner",
+        "desc": "List a drill, scaffolding, or a tractor. Set price, deposit, and availability."
+      },
+      "renter": {
+        "title": "Renter",
+        "desc": "Find the right equipment, book the window, and pay with protection."
+      },
+      "platform": {
+        "title": "Platform",
+        "desc": "We orchestrate payment, hold the deposit, and mediate damage claims."
+      }
+    },
+    "soon": {
+      "title": "Under construction",
+      "body": "Catalog and bookings ship in later slices. This is the public product address."
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Canteiro",
+    "host": "canteiro.brenon.cloud"
+  },
+  "error": {
+    "not_found": "Page not found",
+    "generic": "Something went wrong. Please try again.",
+    "home": "Back to home"
+  }
+}

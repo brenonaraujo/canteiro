@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Canteiro API
+  version: 0.1.0
+  description: |
+    Fundação (F0): processo HTTP observável. Sem catálogo, locação,
+    Google ou Stripe de produto.
+  contact:
+    name: Canteiro
+    url: https://canteiro.brenon.cloud
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8080
+    description: Local
+tags:
+  - name: ops
+    description: Liveness, readiness
+paths:
+  /healthz:
+    get:
+      operationId: Healthz
+      tags: [ops]
+      summary: Liveness probe
+      description: |
+        Returns 200 when the HTTP process is alive.
+        Does not check backing services.
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /readyz:
+    get:
+      operationId: Readyz
+      tags: [ops]
+      summary: Readiness probe
+      description: |
+        Returns 200 when backing services accept traffic.
+        Returns 503 otherwise. Error payloads are generic (no DSN/PII).
+        Localized `message` follows Accept-Language (en, pt-BR, es).
+        Default locale is pt-BR.
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: canteiro
+    ReadyResponse:
+      type: object
+      required: [status, message, message_key]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        service:
+          type: string
+          example: canteiro
+        message:
+          type: string
+          description: Localized human message
+        message_key:
+          type: string
+          description: Stable i18n key
+          example: ready.ok

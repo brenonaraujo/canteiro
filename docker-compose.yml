@@ -1,0 +1,71 @@
+# Canteiro local snapshot (F0). API + Postgres + migrate one-off.
+#   cp deploy/.env.example .env
+#   docker compose up -d --build
+#
+# Frontend is out of this path-scope (web/**).
+
+name: canteiro
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-canteiro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-canteiro}
+      POSTGRES_DB: ${POSTGRES_DB:-canteiro}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - canteiro-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  migrate:
+    image: migrate/migrate:v4.19.1
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    command:
+      - "-path"
+      - "/migrations"
+      - "-database"
+      - "postgres://${POSTGRES_USER:-canteiro}:${POSTGRES_PASSWORD:-canteiro}@postgres:5432/${POSTGRES_DB:-canteiro}?sslmode=disable"
+      - "up"
+
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: ${PORT:-8080}
+      DATABASE_URL: postgres://${POSTGRES_USER:-canteiro}:${POSTGRES_PASSWORD:-canteiro}@postgres:5432/${POSTGRES_DB:-canteiro}?sslmode=disable
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      GIN_MODE: ${GIN_MODE:-release}
+      METRICS_PATH: ${METRICS_PATH:-/metrics}
+      SERVICE_NAME: ${SERVICE_NAME:-canteiro}
+      DEFAULT_LOCALE: ${DEFAULT_LOCALE:-pt-BR}
+      SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-30s}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/server", "-healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  canteiro-postgres-data:

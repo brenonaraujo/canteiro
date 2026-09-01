@@ -1,0 +1,6 @@
+{
+  "health.ok": "Service is alive",
+  "ready.ok": "Service is ready",
+  "ready.not_ready": "Service is not ready",
+  "error.internal": "Internal server error. Please try again later."
+}
