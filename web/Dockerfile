@@ -25,7 +25,11 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV NITRO_HOST=0.0.0.0
 ENV NITRO_PORT=3000
-RUN addgroup -g 1001 -S nodejs && adduser -S nuxt -u 1001 -G nodejs
+RUN apk upgrade --no-cache \
+ && addgroup -g 1001 -S nodejs && adduser -S nuxt -u 1001 -G nodejs \
+ && rm -rf /usr/local/lib/node_modules /opt/yarn-v1.22.22 \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+      /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=builder --chown=nuxt:nodejs /app/.output ./.output
 USER 1001:1001
 EXPOSE 3000
