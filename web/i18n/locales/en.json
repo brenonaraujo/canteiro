@@ -102,5 +102,193 @@
       "generic": "Could not finish. Please try again.",
       "deactivated": "This account is deactivated and does not reopen in v1."
     }
+  },
+  "common": {
+    "app_name": "Canteiro",
+    "cancel": "Cancel"
+  },
+  "breadcrumb": {
+    "home": "Home",
+    "sign_in": "Sign in",
+    "account": "Account",
+    "deactivate": "Deactivate",
+    "listings": "Catalog",
+    "listing": "Listing",
+    "account_listings": "My listings",
+    "listing_new": "New listing",
+    "listing_edit": "Edit listing"
+  },
+  "listing": {
+    "search": {
+      "title": "Public catalog",
+      "subtitle": "Find available equipment without signing in.",
+      "prev": "Previous",
+      "next": "Next",
+      "page_x_of_y": "Page {x} of {y}",
+      "empty_title": "No matching listings",
+      "empty_body": "Try loosening some filters (size, city or dates) to see more results."
+    },
+    "filters": {
+      "any": "Any",
+      "category": "Category",
+      "size": "Size",
+      "operator_mode": "Operator",
+      "city": "City",
+      "city_placeholder": "e.g. São Paulo",
+      "from": "Available from",
+      "to": "Available until",
+      "price_min": "Min price (BRL)",
+      "price_max": "Max price (BRL)",
+      "clear": "Clear",
+      "apply": "Search"
+    },
+    "category": {
+      "manual": "Manual",
+      "electric": "Electric",
+      "light_construction": "Light construction",
+      "agricultural": "Agricultural",
+      "heavy": "Heavy"
+    },
+    "size": {
+      "light": "Light",
+      "heavy": "Heavy"
+    },
+    "operator_mode": {
+      "none": "No operator",
+      "optional": "Optional operator",
+      "required": "Required operator"
+    },
+    "price": {
+      "per_hour": "hour",
+      "per_day": "day"
+    },
+    "state": {
+      "draft": "Draft",
+      "published": "Published",
+      "paused": "Paused"
+    },
+    "card": {
+      "view": "View listing",
+      "view_listing": "View listing {title}",
+      "deposit_label": "Deposit"
+    },
+    "ficha": {
+      "title": "Listing",
+      "city": "Pickup location",
+      "deposit": "Deposit",
+      "lead_time": "Minimum lead time",
+      "lead_time_value": "{hours} h",
+      "description": "Description",
+      "unavailable": "Unavailable on these dates",
+      "unavailable_empty": "No blocks declared by the owner yet.",
+      "identity_note": "Identity and contact only show after the reservation is accepted (next phase)."
+    },
+    "owner": {
+      "title": "My listings",
+      "subtitle": "Create, edit, publish and pause your listings.",
+      "new": "New listing",
+      "edit": "Edit",
+      "view_public": "View in catalog",
+      "publish": "Publish",
+      "pause": "Pause",
+      "republish": "Republish",
+      "empty_title": "You don't have any listings yet",
+      "empty_body": "Create your first listing to appear in the public catalog.",
+      "create_first": "Create my first listing"
+    },
+    "new": {
+      "title": "New listing",
+      "subtitle": "Fill in the fields. Listings only show in the catalog after they are published.",
+      "draft_saved": "Draft saved",
+      "published": "Listing published",
+      "publish_invalid": "Fix the errors before publishing.",
+      "save_draft": "Save draft",
+      "publish": "Publish",
+      "accept_terms_button": "Accept owner terms"
+    },
+    "edit": {
+      "title": "Edit listing",
+      "saved": "Changes saved",
+      "published": "Listing published",
+      "paused": "Listing paused",
+      "published_locked": "Listing published",
+      "published_locked_desc": "Pause the listing before editing the fields.",
+      "save": "Save changes",
+      "publish": "Publish",
+      "pause": "Pause"
+    },
+    "form": {
+      "section_basic": "Basic details",
+      "section_location": "Location & delivery",
+      "section_pricing": "Price & deposit",
+      "section_rules": "Rental rules",
+      "section_operator": "Operator",
+      "section_heavy": "Heavy equipment",
+      "title": "Title",
+      "title_placeholder": "e.g. Bosch 750W drill",
+      "description": "Description",
+      "description_placeholder": "What's included, condition, usage limits…",
+      "category": "Category",
+      "photos": "Main photo (URL)",
+      "photos_hint": "At least one photo is required.",
+      "photos_placeholder": "https://…",
+      "pickup_city": "Pickup city",
+      "pickup_neighborhood": "Neighborhood or pickup point",
+      "delivery_enabled": "I offer delivery",
+      "delivery_coverage": "Delivery area",
+      "delivery_coverage_placeholder": "e.g. up to 10 km from downtown São Paulo",
+      "price_unit": "Unit",
+      "per_day": "Per day",
+      "per_hour": "Per hour",
+      "price_amount": "Price for the period",
+      "deposit": "Deposit (BRL)",
+      "min_lead_time_hours": "Minimum lead time (hours)",
+      "rules_document_required": "Require document",
+      "rules_experience_required": "Require experience",
+      "rules_travel_restricted": "Restrict travel",
+      "rules_min_age": "Renter minimum age",
+      "operator_mode": "Operator mode",
+      "operator_hourly_rate": "Operator hourly rate",
+      "operator_min_hours": "Minimum hours per booking",
+      "operator_name": "Operator name",
+      "operator_phone": "Operator phone",
+      "operator_is_owner": "The operator is the owner",
+      "heavy_legal_cession": "I declare that I can legally transfer this asset",
+      "heavy_legal_cession_desc": "Required to publish heavy equipment."
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "search_failed": "Could not search the catalog right now.",
+      "not_found": "Listing not found.",
+      "unauthorized": "Your session has expired. Please sign in again.",
+      "forbidden": "You don't have permission for this action.",
+      "conflict": "The operation could not be completed in the current state.",
+      "gates_failed": "Some listing requirements were not met."
+    }
+  },
+  "draft": {
+    "error": {
+      "title_length": "Title must be between 4 and 120 characters.",
+      "description_length": "Description must be between 12 and 4000 characters.",
+      "pickup_city_required": "Enter the pickup city.",
+      "pickup_neighborhood_length": "Neighborhood must be at most 80 characters.",
+      "price_amount_required": "Enter a price greater than zero.",
+      "deposit_required": "Enter the deposit amount.",
+      "deposit_below_minimum": "Deposit is below the minimum for this category.",
+      "lead_time_invalid": "Enter a valid minimum lead time.",
+      "photo_required": "Add at least one photo.",
+      "operator_identity_required": "Identify the operator (name required).",
+      "operator_rate_required": "Enter the operator hourly rate.",
+      "heavy_cession_required": "Declare that you can legally transfer this heavy asset.",
+      "delivery_coverage_required": "Enter a delivery coverage area."
+    }
+  },
+  "publish": {
+    "error": {
+      "no_session": "Sign in to publish.",
+      "terms_not_accepted": "You must accept the owner terms before publishing.",
+      "payout_not_set": "Set up your payout details before publishing.",
+      "gates_failed": "Fix the requirements below before publishing."
+    }
   }
 }

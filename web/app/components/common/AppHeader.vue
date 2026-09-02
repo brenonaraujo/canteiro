@@ -5,7 +5,8 @@ const { t } = useI18n()
 
 const navItems = computed(() => [
   { label: t('nav.home'), to: '/' },
-  { label: t('nav.highlights'), to: '#highlights' }
+  { label: t('nav.highlights'), to: '#highlights' },
+  { label: t('breadcrumb.listings'), to: '/listings' }
 ])
 </script>
 
