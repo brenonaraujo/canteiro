@@ -7,5 +7,19 @@
   "auth.not_configured": "Google sign-in is not available.",
   "account.invalid_profile": "Visible name and phone are required.",
   "account.deactivated": "This account is deactivated.",
-  "account.confirm_required": "Confirm deactivation to continue."
+  "account.confirm_required": "Confirm deactivation to continue.",
+  "listing.unauthorized": "Sign in with Google to manage your listings.",
+  "listing.forbidden": "You don't have permission to change this listing.",
+  "listing.not_found": "Listing not found.",
+  "listing.invalid_input": "Listing data is invalid. Review the fields and try again.",
+  "listing.invalid_payload": "Invalid listing payload: {{.error}}",
+  "listing.account_deactivated": "Your account is deactivated. Listings cannot be published.",
+  "listing.profile_incomplete": "Complete visible name and phone to publish.",
+  "listing.owner_onboarding_required": "Add payout details and accept the owner terms before publishing.",
+  "listing.publish_gates": "Review the fields before publishing this listing.",
+  "listing.already_published": "Listing is already published. Pause it before editing.",
+  "listing.not_published": "Only published listings can be paused.",
+  "listing.not_editable": "Published listings can't be edited. Pause before changing.",
+  "listing.block_overlap": "This block overlaps an existing one.",
+  "listing.block_window": "Block end must be after the start."
 }
