@@ -122,8 +122,8 @@ func (s *Service) Publish(ctx context.Context, ownerID, id string) (Listing, err
 	if !cur.CanPublishFrom(cur.State) {
 		return Listing{}, ErrAlreadyPublished
 	}
-	if err := s.canOwnerPublish(ctx, ownerID); err != nil {
-		return Listing{}, err
+	if perr := s.canOwnerPublish(ctx, ownerID); perr != nil {
+		return Listing{}, perr
 	}
 	cfg, _, err := s.repo.CategoryByName(ctx, cur.Category)
 	if err != nil {

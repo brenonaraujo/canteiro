@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -297,8 +296,6 @@ type openapiUUIDT = openapiUUIDReal
 
 // --- tests -----------------------------------------------------------------
 
-func init() { _ = errors.New("placeholder") }
-
 func TestCreateListing_RequiresSession(t *testing.T) {
 	r := newRouter(t, "", newAccountLookup())
 	w := httptest.NewRecorder()
@@ -440,6 +437,101 @@ func TestAddBlock_HappyPath(t *testing.T) {
 	var block api.AvailabilityBlock
 	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &block))
 	require.NotEmpty(t, block.Id)
+}
+
+func TestListMineAndGetMyListing_HappyPath(t *testing.T) {
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	body := `{"title":"Furadeira","description":"Furadeira de impacto 600W com maleta.","category":"electric","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":12000,"deposit_cents":8000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/listings", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	w2 := httptest.NewRecorder()
+	lreq, _ := http.NewRequest("GET", "/listings", nil)
+	r.ServeHTTP(w2, lreq)
+	require.Equal(t, http.StatusOK, w2.Code)
+	var list []api.Listing
+	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &list))
+	require.NotEmpty(t, list)
+
+	w3 := httptest.NewRecorder()
+	greq, _ := http.NewRequest("GET", "/listings/11111111-1111-4111-8111-111111111111", nil)
+	r.ServeHTTP(w3, greq)
+	require.Equal(t, http.StatusOK, w3.Code)
+}
+
+func TestUpdateAndPauseListing(t *testing.T) {
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive, DisplayName: "Owner", Phone: "+551****9999"}
+	r := newRouter(t, "owner-1", lookup)
+	body := `{"title":"Furadeira","description":"Furadeira de impacto 600W com maleta.","category":"electric","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":12000,"deposit_cents":8000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/listings", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	updBody := `{"title":"Furadeira v2","price_amount_cents":15000}`
+	w2 := httptest.NewRecorder()
+	ureq, _ := http.NewRequest("PATCH", "/listings/11111111-1111-4111-8111-111111111111", strings.NewReader(updBody))
+	ureq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w2, ureq)
+	require.Equal(t, http.StatusOK, w2.Code)
+
+	// Pause requires a published listing (Service.CanPause gate), so the
+	// draft returns 409 — that still exercises PauseListing for coverage.
+	w3 := httptest.NewRecorder()
+	preq, _ := http.NewRequest("POST", "/listings/11111111-1111-4111-8111-111111111111/pause", nil)
+	r.ServeHTTP(w3, preq)
+	require.Equal(t, http.StatusConflict, w3.Code)
+}
+
+func TestListAndRemoveBlock(t *testing.T) {
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	body := `{"title":"Furadeira","description":"Furadeira de impacto 600W com maleta.","category":"electric","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":12000,"deposit_cents":8000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/listings", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	start := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 3, 1, 18, 0, 0, 0, time.UTC)
+	blockBody, _ := json.Marshal(api.AddBlockRequest{StartsAt: start, EndsAt: end})
+	w2 := httptest.NewRecorder()
+	breq, _ := http.NewRequest("POST", "/listings/11111111-1111-4111-8111-111111111111/blocks", bytes.NewReader(blockBody))
+	breq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w2, breq)
+	require.Equal(t, http.StatusCreated, w2.Code)
+	var block api.AvailabilityBlock
+	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &block))
+
+	w3 := httptest.NewRecorder()
+	lreq, _ := http.NewRequest("GET", "/listings/11111111-1111-4111-8111-111111111111/blocks", nil)
+	r.ServeHTTP(w3, lreq)
+	require.Equal(t, http.StatusOK, w3.Code)
+
+	w4 := httptest.NewRecorder()
+	rreq, _ := http.NewRequest("DELETE", "/listings/11111111-1111-4111-8111-111111111111/blocks/"+block.Id.String(), nil)
+	r.ServeHTTP(w4, rreq)
+	require.Equal(t, http.StatusNoContent, w4.Code)
+}
+
+func TestUpdateOwnerOnboarding(t *testing.T) {
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	w3 := httptest.NewRecorder()
+	ureq, _ := http.NewRequest("PATCH", "/owner/onboarding", strings.NewReader(`{"payout_kind":"pix","payout_last4":"1234","accept_terms":true,"terms_version":"v1"}`))
+	ureq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w3, ureq)
+	require.Equal(t, http.StatusOK, w3.Code)
 }
 
 // --- helpers ---------------------------------------------------------------

@@ -127,6 +127,13 @@ func listingToAPI(l listing.Listing) api.Listing {
 		Photos:            l.Photos,
 		HeavyLegalCession: &l.HeavyLegalCession,
 	}
+	attachTimestamps(&out, l)
+	return out
+}
+
+// attachTimestamps copies the optional CreatedAt/UpdatedAt fields from the
+// domain listing onto the DTO, preserving the pointer-optional API contract.
+func attachTimestamps(out *api.Listing, l listing.Listing) {
 	if !l.CreatedAt.IsZero() {
 		t := l.CreatedAt
 		out.CreatedAt = &t
@@ -135,7 +142,6 @@ func listingToAPI(l listing.Listing) api.Listing {
 		t := l.UpdatedAt
 		out.UpdatedAt = &t
 	}
-	return out
 }
 
 func operatorToAPI(op listing.Operator) api.ListingOperator {
@@ -159,60 +165,78 @@ func operatorToAPI(op listing.Operator) api.ListingOperator {
 }
 
 func requestToListing(r api.CreateListingRequest) listing.Listing {
-	del := listing.Delivery{}
-	if r.Delivery != nil {
-		del = listing.Delivery{Enabled: r.Delivery.Enabled, Coverage: r.Delivery.Coverage}
-	}
-	rules := listing.Rules{}
-	if r.Rules != nil {
-		rules = listing.Rules{
-			DocumentRequired:   boolDeref(r.Rules.DocumentRequired),
-			MinAge:             intDeref(r.Rules.MinAge),
-			ExperienceRequired: boolDeref(r.Rules.ExperienceRequired),
-			TravelRestricted:   boolDeref(r.Rules.TravelRestricted),
-		}
-	}
-	op := listing.Operator{Mode: listing.OperatorMode(r.Operator.Mode)}
-	if r.Operator.HourlyRateCents != nil {
-		op.HourlyRateCents = int64(*r.Operator.HourlyRateCents)
-	}
-	if r.Operator.MinHours != nil {
-		op.MinHours = *r.Operator.MinHours
-	}
-	if r.Operator.Identity != nil {
-		op.Identity = listing.OperatorIdentity{
-			Name:    r.Operator.Identity.Name,
-			Phone:   r.Operator.Identity.Phone,
-			IsOwner: r.Operator.Identity.IsOwner,
-		}
-	}
-	var heavy bool
-	if r.HeavyLegalCession != nil {
-		heavy = *r.HeavyLegalCession
-	}
-	var photos []string
-	if r.Photos != nil {
-		photos = *r.Photos
-	}
 	return listing.Listing{
 		Title:              r.Title,
 		Description:        r.Description,
 		Category:           listing.Category(r.Category),
 		PickupCity:         r.PickupCity,
 		PickupNeighborhood: r.PickupNeighborhood,
-		Delivery:           del,
+		Delivery:           deliveryFromRequest(r.Delivery),
 		PriceUnit:          listing.PriceUnit(r.PriceUnit),
 		PriceAmountCents:   int64(r.PriceAmountCents),
 		DepositCents:       int64(r.DepositCents),
 		MinLeadTimeHours:   r.MinLeadTimeHours,
-		Photos:             photos,
-		Rules:              rules,
-		Operator:           op,
-		HeavyLegalCession:  heavy,
+		Photos:             photosFromRequest(r.Photos),
+		Rules:              rulesFromRequest(r.Rules),
+		Operator:           operatorFromRequest(r.Operator),
+		HeavyLegalCession:  boolDeref(r.HeavyLegalCession),
 	}
 }
 
+func deliveryFromRequest(d *api.ListingDelivery) listing.Delivery {
+	if d == nil {
+		return listing.Delivery{}
+	}
+	return listing.Delivery{Enabled: d.Enabled, Coverage: d.Coverage}
+}
+
+func rulesFromRequest(r *api.ListingRules) listing.Rules {
+	if r == nil {
+		return listing.Rules{}
+	}
+	return listing.Rules{
+		DocumentRequired:   boolDeref(r.DocumentRequired),
+		MinAge:             intDeref(r.MinAge),
+		ExperienceRequired: boolDeref(r.ExperienceRequired),
+		TravelRestricted:   boolDeref(r.TravelRestricted),
+	}
+}
+
+func operatorFromRequest(o api.ListingOperator) listing.Operator {
+	op := listing.Operator{Mode: listing.OperatorMode(o.Mode)}
+	if o.HourlyRateCents != nil {
+		op.HourlyRateCents = int64(*o.HourlyRateCents)
+	}
+	if o.MinHours != nil {
+		op.MinHours = *o.MinHours
+	}
+	if o.Identity != nil {
+		op.Identity = listing.OperatorIdentity{
+			Name:    o.Identity.Name,
+			Phone:   o.Identity.Phone,
+			IsOwner: o.Identity.IsOwner,
+		}
+	}
+	return op
+}
+
+func photosFromRequest(p *[]string) []string {
+	if p == nil {
+		return nil
+	}
+	return *p
+}
+
 func applyPatch(cur listing.Listing, p api.UpdateListingRequest) listing.Listing {
+	applyTextPatch(&cur, p)
+	applyLocationPatch(&cur, p)
+	applyPricingPatch(&cur, p)
+	applyOperatorPatch(&cur, p)
+	applyFlagsPatch(&cur, p)
+	return cur
+}
+
+func applyTextPatch(cur *listing.Listing, p api.UpdateListingRequest) {
 	if p.Title != nil {
 		cur.Title = *p.Title
 	}
@@ -222,6 +246,9 @@ func applyPatch(cur listing.Listing, p api.UpdateListingRequest) listing.Listing
 	if p.Category != nil {
 		cur.Category = listing.Category(*p.Category)
 	}
+}
+
+func applyLocationPatch(cur *listing.Listing, p api.UpdateListingRequest) {
 	if p.PickupCity != nil {
 		cur.PickupCity = *p.PickupCity
 	}
@@ -231,6 +258,9 @@ func applyPatch(cur listing.Listing, p api.UpdateListingRequest) listing.Listing
 	if p.Delivery != nil {
 		cur.Delivery = listing.Delivery{Enabled: p.Delivery.Enabled, Coverage: p.Delivery.Coverage}
 	}
+}
+
+func applyPricingPatch(cur *listing.Listing, p api.UpdateListingRequest) {
 	if p.PriceUnit != nil {
 		cur.PriceUnit = listing.PriceUnit(*p.PriceUnit)
 	}
@@ -243,38 +273,43 @@ func applyPatch(cur listing.Listing, p api.UpdateListingRequest) listing.Listing
 	if p.MinLeadTimeHours != nil {
 		cur.MinLeadTimeHours = *p.MinLeadTimeHours
 	}
+}
+
+func applyOperatorPatch(cur *listing.Listing, p api.UpdateListingRequest) {
 	if p.Operator != nil {
-		op := listing.Operator{Mode: listing.OperatorMode(p.Operator.Mode)}
-		if p.Operator.HourlyRateCents != nil {
-			op.HourlyRateCents = int64(*p.Operator.HourlyRateCents)
-		}
-		if p.Operator.MinHours != nil {
-			op.MinHours = *p.Operator.MinHours
-		}
-		if p.Operator.Identity != nil {
-			op.Identity = listing.OperatorIdentity{
-				Name:    p.Operator.Identity.Name,
-				Phone:   p.Operator.Identity.Phone,
-				IsOwner: p.Operator.Identity.IsOwner,
-			}
-		}
-		cur.Operator = op
+		cur.Operator = patchOperator(*p.Operator)
 	}
 	if p.Rules != nil {
-		cur.Rules = listing.Rules{
-			DocumentRequired:   boolDeref(p.Rules.DocumentRequired),
-			MinAge:             intDeref(p.Rules.MinAge),
-			ExperienceRequired: boolDeref(p.Rules.ExperienceRequired),
-			TravelRestricted:   boolDeref(p.Rules.TravelRestricted),
-		}
+		cur.Rules = rulesFromRequest(p.Rules)
 	}
+}
+
+func applyFlagsPatch(cur *listing.Listing, p api.UpdateListingRequest) {
 	if p.HeavyLegalCession != nil {
 		cur.HeavyLegalCession = *p.HeavyLegalCession
 	}
 	if p.Photos != nil {
 		cur.Photos = *p.Photos
 	}
-	return cur
+}
+
+// patchOperator builds a domain Operator from the optional patch sub-object.
+func patchOperator(o api.ListingOperator) listing.Operator {
+	op := listing.Operator{Mode: listing.OperatorMode(o.Mode)}
+	if o.HourlyRateCents != nil {
+		op.HourlyRateCents = int64(*o.HourlyRateCents)
+	}
+	if o.MinHours != nil {
+		op.MinHours = *o.MinHours
+	}
+	if o.Identity != nil {
+		op.Identity = listing.OperatorIdentity{
+			Name:    o.Identity.Name,
+			Phone:   o.Identity.Phone,
+			IsOwner: o.Identity.IsOwner,
+		}
+	}
+	return op
 }
 
 func onboardingToAPI(o listing.OwnerOnboarding) api.OwnerOnboarding {
@@ -683,7 +718,7 @@ func (l *ListingAPI) GetPublicCalendar(c *gin.Context, id openapi_types.UUID, pa
 	}
 	out := api.PublicCalendar{
 		ListingId: id,
-		Blocks:    make([]struct {
+		Blocks: make([]struct {
 			EndsAt   time.Time `json:"ends_at"`
 			StartsAt time.Time `json:"starts_at"`
 		}, len(bs)),

@@ -36,14 +36,14 @@ type Repository interface {
 
 // SearchFilters mirrors the public catalog query parameters.
 type SearchFilters struct {
-	Category       Category
-	City           string
-	From           time.Time
-	To             time.Time
-	OperatorMode   OperatorMode
-	Size           Size
-	MinPriceCents  int64
-	MaxPriceCents  int64
-	Page           int
-	PageSize       int
+	Category      Category
+	City          string
+	From          time.Time
+	To            time.Time
+	OperatorMode  OperatorMode
+	Size          Size
+	MinPriceCents int64
+	MaxPriceCents int64
+	Page          int
+	PageSize      int
 }

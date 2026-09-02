@@ -26,70 +26,70 @@ func New(db *gorm.DB) *Repo { return &Repo{DB: db} }
 // --- row mappings ---------------------------------------------------------
 
 type listingRow struct {
-	ID                    string    `gorm:"column:id;primaryKey"`
-	OwnerAccountID        string    `gorm:"column:owner_account_id"`
-	State                 string    `gorm:"column:state"`
-	Title                 string    `gorm:"column:title"`
-	Description           string    `gorm:"column:description"`
-	Category              string    `gorm:"column:category"`
-	PickupCity            string    `gorm:"column:pickup_city"`
-	PickupNeighborhood    string    `gorm:"column:pickup_neighborhood"`
-	DeliveryEnabled       bool      `gorm:"column:delivery_enabled"`
-	DeliveryCoverage      string    `gorm:"column:delivery_coverage"`
-	PriceUnit             string    `gorm:"column:price_unit"`
-	PriceAmountCents      int64     `gorm:"column:price_amount_cents"`
-	DepositCents          int64     `gorm:"column:deposit_cents"`
-	MinLeadTimeHours      int       `gorm:"column:min_lead_time_hours"`
-	OperatorMode          string    `gorm:"column:operator_mode"`
-	OperatorHourlyRate    int64     `gorm:"column:operator_hourly_rate_cents"`
-	OperatorMinHours      int       `gorm:"column:operator_min_hours"`
-	OperatorName          string    `gorm:"column:operator_name"`
-	OperatorPhone         string    `gorm:"column:operator_phone"`
-	OperatorIsOwner       bool      `gorm:"column:operator_is_owner"`
-	RuleDocumentRequired  bool      `gorm:"column:rule_document_required"`
-	RuleMinAge            int       `gorm:"column:rule_min_age"`
-	RuleExperienceReq     bool      `gorm:"column:rule_experience_required"`
-	RuleTravelRestricted  bool      `gorm:"column:rule_travel_restricted"`
-	HeavyLegalCession     bool      `gorm:"column:heavy_legal_cession"`
-	CreatedAt             time.Time `gorm:"column:created_at"`
-	UpdatedAt             time.Time `gorm:"column:updated_at"`
+	CreatedAt            time.Time `gorm:"column:created_at"`
+	UpdatedAt            time.Time `gorm:"column:updated_at"`
+	OperatorPhone        string    `gorm:"column:operator_phone"`
+	OperatorMode         string    `gorm:"column:operator_mode"`
+	Description          string    `gorm:"column:description"`
+	Category             string    `gorm:"column:category"`
+	PickupCity           string    `gorm:"column:pickup_city"`
+	PickupNeighborhood   string    `gorm:"column:pickup_neighborhood"`
+	OwnerAccountID       string    `gorm:"column:owner_account_id"`
+	DeliveryCoverage     string    `gorm:"column:delivery_coverage"`
+	PriceUnit            string    `gorm:"column:price_unit"`
+	State                string    `gorm:"column:state"`
+	ID                   string    `gorm:"column:id;primaryKey"`
+	OperatorName         string    `gorm:"column:operator_name"`
+	Title                string    `gorm:"column:title"`
+	RuleMinAge           int       `gorm:"column:rule_min_age"`
+	MinLeadTimeHours     int       `gorm:"column:min_lead_time_hours"`
+	DepositCents         int64     `gorm:"column:deposit_cents"`
+	OperatorMinHours     int       `gorm:"column:operator_min_hours"`
+	OperatorHourlyRate   int64     `gorm:"column:operator_hourly_rate_cents"`
+	PriceAmountCents     int64     `gorm:"column:price_amount_cents"`
+	RuleTravelRestricted bool      `gorm:"column:rule_travel_restricted"`
+	OperatorIsOwner      bool      `gorm:"column:operator_is_owner"`
+	RuleDocumentRequired bool      `gorm:"column:rule_document_required"`
+	RuleExperienceReq    bool      `gorm:"column:rule_experience_required"`
+	HeavyLegalCession    bool      `gorm:"column:heavy_legal_cession"`
+	DeliveryEnabled      bool      `gorm:"column:delivery_enabled"`
 }
 
 func (listingRow) TableName() string { return "listings" }
 
 type photoRow struct {
 	ListingID string `gorm:"column:listing_id;primaryKey"`
-	Position  int    `gorm:"column:position;primaryKey"`
 	URL       string `gorm:"column:url"`
+	Position  int    `gorm:"column:position;primaryKey"`
 }
 
 func (photoRow) TableName() string { return "listing_photos" }
 
 type blockRow struct {
-	ID        string    `gorm:"column:id;primaryKey"`
-	ListingID string    `gorm:"column:listing_id"`
 	StartsAt  time.Time `gorm:"column:starts_at"`
 	EndsAt    time.Time `gorm:"column:ends_at"`
-	Reason    string    `gorm:"column:reason"`
 	CreatedAt time.Time `gorm:"column:created_at"`
+	ID        string    `gorm:"column:id;primaryKey"`
+	ListingID string    `gorm:"column:listing_id"`
+	Reason    string    `gorm:"column:reason"`
 }
 
 func (blockRow) TableName() string { return "listing_blocks" }
 
 type ownerOnboardingRow struct {
-	AccountID      string     `gorm:"column:account_id;primaryKey"`
-	PayoutKind     string     `gorm:"column:payout_kind"`
-	PayoutLast4    string     `gorm:"column:payout_last4"`
+	AccountID       string     `gorm:"column:account_id;primaryKey"`
+	PayoutKind      string     `gorm:"column:payout_kind"`
+	PayoutLast4     string     `gorm:"column:payout_last4"`
 	TermsAcceptedAt *time.Time `gorm:"column:terms_accepted_at"`
-	TermsVersion   string     `gorm:"column:terms_version"`
+	TermsVersion    string     `gorm:"column:terms_version"`
 }
 
 func (ownerOnboardingRow) TableName() string { return "owner_onboarding" }
 
 type categoryRow struct {
-	Category       string `gorm:"column:category;primaryKey"`
-	Size           string `gorm:"column:size"`
-	DepositMinCents int64 `gorm:"column:deposit_min_cents"`
+	Category        string `gorm:"column:category;primaryKey"`
+	Size            string `gorm:"column:size"`
+	DepositMinCents int64  `gorm:"column:deposit_min_cents"`
 }
 
 func (categoryRow) TableName() string { return "listing_categories" }
@@ -106,66 +106,75 @@ func toListing(r listingRow, photos []string) listing.Listing {
 		Category:           listing.Category(r.Category),
 		PickupCity:         r.PickupCity,
 		PickupNeighborhood: r.PickupNeighborhood,
-		Delivery: listing.Delivery{
-			Enabled:  r.DeliveryEnabled,
-			Coverage: r.DeliveryCoverage,
+		Delivery:           rowToDelivery(r),
+		PriceUnit:          listing.PriceUnit(r.PriceUnit),
+		PriceAmountCents:   r.PriceAmountCents,
+		DepositCents:       r.DepositCents,
+		MinLeadTimeHours:   r.MinLeadTimeHours,
+		Photos:             photos,
+		Rules:              rowToRules(r),
+		Operator:           rowToOperator(r),
+		HeavyLegalCession:  r.HeavyLegalCession,
+		CreatedAt:          r.CreatedAt,
+		UpdatedAt:          r.UpdatedAt,
+	}
+}
+
+func rowToDelivery(r listingRow) listing.Delivery {
+	return listing.Delivery{Enabled: r.DeliveryEnabled, Coverage: r.DeliveryCoverage}
+}
+
+func rowToRules(r listingRow) listing.Rules {
+	return listing.Rules{
+		DocumentRequired:   r.RuleDocumentRequired,
+		MinAge:             r.RuleMinAge,
+		ExperienceRequired: r.RuleExperienceReq,
+		TravelRestricted:   r.RuleTravelRestricted,
+	}
+}
+
+func rowToOperator(r listingRow) listing.Operator {
+	return listing.Operator{
+		Mode:            listing.OperatorMode(r.OperatorMode),
+		HourlyRateCents: r.OperatorHourlyRate,
+		MinHours:        r.OperatorMinHours,
+		Identity: listing.OperatorIdentity{
+			Name:    r.OperatorName,
+			Phone:   r.OperatorPhone,
+			IsOwner: r.OperatorIsOwner,
 		},
-		PriceUnit:         listing.PriceUnit(r.PriceUnit),
-		PriceAmountCents:  r.PriceAmountCents,
-		DepositCents:      r.DepositCents,
-		MinLeadTimeHours:  r.MinLeadTimeHours,
-		Photos:            photos,
-		Rules: listing.Rules{
-			DocumentRequired:   r.RuleDocumentRequired,
-			MinAge:             r.RuleMinAge,
-			ExperienceRequired: r.RuleExperienceReq,
-			TravelRestricted:   r.RuleTravelRestricted,
-		},
-		Operator: listing.Operator{
-			Mode:            listing.OperatorMode(r.OperatorMode),
-			HourlyRateCents: r.OperatorHourlyRate,
-			MinHours:        r.OperatorMinHours,
-			Identity: listing.OperatorIdentity{
-				Name:    r.OperatorName,
-				Phone:   r.OperatorPhone,
-				IsOwner: r.OperatorIsOwner,
-			},
-		},
-		HeavyLegalCession: r.HeavyLegalCession,
-		CreatedAt:         r.CreatedAt,
-		UpdatedAt:         r.UpdatedAt,
 	}
 }
 
 func toRow(l listing.Listing) listingRow {
 	return listingRow{
-		ID:                    l.ID,
-		OwnerAccountID:        l.OwnerAccountID,
-		State:                 string(l.State),
-		Title:                 l.Title,
-		Description:           l.Description,
-		Category:              string(l.Category),
-		PickupCity:            l.PickupCity,
-		PickupNeighborhood:    l.PickupNeighborhood,
-		DeliveryEnabled:       l.Delivery.Enabled,
-		DeliveryCoverage:      l.Delivery.Coverage,
-		PriceUnit:             string(l.PriceUnit),
-		PriceAmountCents:      l.PriceAmountCents,
-		DepositCents:          l.DepositCents,
-		MinLeadTimeHours:      l.MinLeadTimeHours,
-		OperatorMode:          string(l.Operator.Mode),
-		OperatorHourlyRate:    l.Operator.HourlyRateCents,
-		OperatorMinHours:      l.Operator.MinHours,
-		OperatorName:          l.Operator.Identity.Name,
-		OperatorPhone:         l.Operator.Identity.Phone,
-		OperatorIsOwner:       l.Operator.Identity.IsOwner,
-		RuleDocumentRequired:  l.Rules.DocumentRequired,
-		RuleMinAge:            l.Rules.MinAge,
-		RuleExperienceReq:     l.Rules.ExperienceRequired,
-		RuleTravelRestricted:  l.Rules.TravelRestricted,
-		HeavyLegalCession:     l.HeavyLegalCession,
-		CreatedAt:             l.CreatedAt,
-		UpdatedAt:             l.UpdatedAt,
+		ID:                   l.ID,
+		OwnerAccountID:       l.OwnerAccountID,
+		State:                string(l.State),
+		Title:                l.Title,
+		Description:          l.Description,
+		Category:             string(l.Category),
+		PickupCity:           l.PickupCity,
+		PickupNeighborhood:   l.PickupNeighborhood,
+		DeliveryEnabled:      l.Delivery.Enabled,
+		DeliveryCoverage:     l.Delivery.Coverage,
+		PriceUnit:            string(l.PriceUnit),
+		PriceAmountCents:     l.PriceAmountCents,
+		DepositCents:         l.DepositCents,
+		MinLeadTimeHours:     l.MinLeadTimeHours,
+		OperatorMode:         string(l.Operator.Mode),
+		OperatorHourlyRate:   l.Operator.HourlyRateCents,
+		OperatorMinHours:     l.Operator.MinHours,
+		OperatorName:         l.Operator.Identity.Name,
+		OperatorPhone:        l.Operator.Identity.Phone,
+		OperatorIsOwner:      l.Operator.Identity.IsOwner,
+		RuleDocumentRequired: l.Rules.DocumentRequired,
+		RuleMinAge:           l.Rules.MinAge,
+		RuleExperienceReq:    l.Rules.ExperienceRequired,
+		RuleTravelRestricted: l.Rules.TravelRestricted,
+		HeavyLegalCession:    l.HeavyLegalCession,
+		CreatedAt:            l.CreatedAt,
+		UpdatedAt:            l.UpdatedAt,
 	}
 }
 
@@ -216,31 +225,7 @@ func (r *Repo) Create(ctx context.Context, l listing.Listing) (listing.Listing, 
 func (r *Repo) Update(ctx context.Context, l listing.Listing) (listing.Listing, error) {
 	row := toRow(l)
 	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&listingRow{}).Where("id = ?", row.ID).Updates(map[string]any{
-			"title":                      row.Title,
-			"description":                row.Description,
-			"category":                   row.Category,
-			"pickup_city":                row.PickupCity,
-			"pickup_neighborhood":        row.PickupNeighborhood,
-			"delivery_enabled":           row.DeliveryEnabled,
-			"delivery_coverage":          row.DeliveryCoverage,
-			"price_unit":                 row.PriceUnit,
-			"price_amount_cents":         row.PriceAmountCents,
-			"deposit_cents":              row.DepositCents,
-			"min_lead_time_hours":        row.MinLeadTimeHours,
-			"operator_mode":              row.OperatorMode,
-			"operator_hourly_rate_cents": row.OperatorHourlyRate,
-			"operator_min_hours":         row.OperatorMinHours,
-			"operator_name":              row.OperatorName,
-			"operator_phone":             row.OperatorPhone,
-			"operator_is_owner":          row.OperatorIsOwner,
-			"rule_document_required":     row.RuleDocumentRequired,
-			"rule_min_age":               row.RuleMinAge,
-			"rule_experience_required":   row.RuleExperienceReq,
-			"rule_travel_restricted":     row.RuleTravelRestricted,
-			"heavy_legal_cession":        row.HeavyLegalCession,
-			"updated_at":                 row.UpdatedAt,
-		})
+		res := tx.Model(&listingRow{}).Where("id = ?", row.ID).Updates(updateColumns(row))
 		if res.Error != nil {
 			return res.Error
 		}
@@ -253,6 +238,36 @@ func (r *Repo) Update(ctx context.Context, l listing.Listing) (listing.Listing, 
 		return listing.Listing{}, err
 	}
 	return r.GetByID(ctx, row.ID)
+}
+
+// updateColumns maps the mutable row fields onto their database column
+// names. Centralizing this keeps Update focused on transaction flow.
+func updateColumns(row listingRow) map[string]any {
+	return map[string]any{
+		"title":                      row.Title,
+		"description":                row.Description,
+		"category":                   row.Category,
+		"pickup_city":                row.PickupCity,
+		"pickup_neighborhood":        row.PickupNeighborhood,
+		"delivery_enabled":           row.DeliveryEnabled,
+		"delivery_coverage":          row.DeliveryCoverage,
+		"price_unit":                 row.PriceUnit,
+		"price_amount_cents":         row.PriceAmountCents,
+		"deposit_cents":              row.DepositCents,
+		"min_lead_time_hours":        row.MinLeadTimeHours,
+		"operator_mode":              row.OperatorMode,
+		"operator_hourly_rate_cents": row.OperatorHourlyRate,
+		"operator_min_hours":         row.OperatorMinHours,
+		"operator_name":              row.OperatorName,
+		"operator_phone":             row.OperatorPhone,
+		"operator_is_owner":          row.OperatorIsOwner,
+		"rule_document_required":     row.RuleDocumentRequired,
+		"rule_min_age":               row.RuleMinAge,
+		"rule_experience_required":   row.RuleExperienceReq,
+		"rule_travel_restricted":     row.RuleTravelRestricted,
+		"heavy_legal_cession":        row.HeavyLegalCession,
+		"updated_at":                 row.UpdatedAt,
+	}
 }
 
 func (r *Repo) replacePhotosTx(tx *gorm.DB, listingID string, photos []string) error {
@@ -443,11 +458,11 @@ func (r *Repo) UpsertOwnerOnboarding(ctx context.Context, o listing.OwnerOnboard
 	err := r.DB.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "account_id"}},
 		DoUpdates: clause.Assignments(map[string]any{
-			"payout_kind":      row.PayoutKind,
-			"payout_last4":     row.PayoutLast4,
+			"payout_kind":       row.PayoutKind,
+			"payout_last4":      row.PayoutLast4,
 			"terms_accepted_at": row.TermsAcceptedAt,
-			"terms_version":    row.TermsVersion,
-			"updated_at":       time.Now().UTC(),
+			"terms_version":     row.TermsVersion,
+			"updated_at":        time.Now().UTC(),
 		}),
 	}).Create(&row).Error
 	if err != nil {
@@ -499,36 +514,10 @@ func (r *Repo) CategoryByName(ctx context.Context, c listing.Category) (listing.
 // SearchCatalog returns listings that match the supplied filters. `from`/`to`
 // are an availability window that excludes listings with overlapping blocks.
 func (r *Repo) SearchCatalog(ctx context.Context, f listing.SearchFilters) ([]listing.Listing, int, error) {
-	page := f.Page
-	if page < 1 {
-		page = 1
-	}
-	size := f.PageSize
-	if size <= 0 || size > 100 {
-		size = 20
-	}
+	page, size := normalisePagination(f.Page, f.PageSize)
 	q := r.DB.WithContext(ctx).Model(&listingRow{}).
 		Where("state = ?", string(listing.StatePublished))
-	if f.Category != "" {
-		q = q.Where("category = ?", string(f.Category))
-	}
-	if f.City != "" {
-		q = q.Where("pickup_city ILIKE ?", f.City)
-	}
-	if f.Size != "" {
-		q = q.Where("category IN (?)", r.DB.Model(&categoryRow{}).
-			Where("size = ?", string(f.Size)).
-			Select("category"))
-	}
-	if f.OperatorMode != "" {
-		q = q.Where("operator_mode = ?", string(f.OperatorMode))
-	}
-	if f.MinPriceCents > 0 {
-		q = q.Where("price_amount_cents >= ?", f.MinPriceCents)
-	}
-	if f.MaxPriceCents > 0 {
-		q = q.Where("price_amount_cents <= ?", f.MaxPriceCents)
-	}
+	q = applyCatalogFilters(r.DB, q, f)
 	if !f.From.IsZero() && !f.To.IsZero() && f.From.Before(f.To) {
 		// Exclude listings with any block overlapping [from, to).
 		sub := r.DB.Model(&blockRow{}).
@@ -558,6 +547,43 @@ func (r *Repo) SearchCatalog(ctx context.Context, f listing.SearchFilters) ([]li
 		out = append(out, toListing(row, photos))
 	}
 	return out, int(total), nil
+}
+
+func normalisePagination(page, size int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 || size > 100 {
+		size = 20
+	}
+	return page, size
+}
+
+// applyCatalogFilters narrows the catalog query by the optional filters.
+// Each branch corresponds to one catalog filter, keeping SearchCatalog
+// focused on the overall query shape.
+func applyCatalogFilters(db *gorm.DB, q *gorm.DB, f listing.SearchFilters) *gorm.DB {
+	if f.Category != "" {
+		q = q.Where("category = ?", string(f.Category))
+	}
+	if f.City != "" {
+		q = q.Where("pickup_city ILIKE ?", f.City)
+	}
+	if f.Size != "" {
+		q = q.Where("category IN (?)", db.Model(&categoryRow{}).
+			Where("size = ?", string(f.Size)).
+			Select("category"))
+	}
+	if f.OperatorMode != "" {
+		q = q.Where("operator_mode = ?", string(f.OperatorMode))
+	}
+	if f.MinPriceCents > 0 {
+		q = q.Where("price_amount_cents >= ?", f.MinPriceCents)
+	}
+	if f.MaxPriceCents > 0 {
+		q = q.Where("price_amount_cents <= ?", f.MaxPriceCents)
+	}
+	return q
 }
 
 // --- helpers --------------------------------------------------------------

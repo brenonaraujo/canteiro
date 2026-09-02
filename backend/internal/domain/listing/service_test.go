@@ -2,7 +2,6 @@ package listing_test
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -17,12 +16,12 @@ import (
 // --- in-memory fakes -------------------------------------------------------
 
 type memRepo struct {
-	mu       sync.Mutex
 	byID     map[string]listing.Listing
-	blocks   map[string][]listing.Block // listingID -> blocks
+	blocks   map[string][]listing.Block
 	onboard  map[string]listing.OwnerOnboarding
 	cats     map[listing.Category]listing.CategoryConfig
 	catOrder []listing.CategoryConfig
+	mu       sync.Mutex
 }
 
 func newMemRepo() *memRepo {
@@ -222,8 +221,8 @@ func (r *memRepo) SearchCatalog(_ context.Context, _ listing.SearchFilters) ([]l
 // --- account fakes --------------------------------------------------------
 
 type fakeAccountLookup struct {
-	mu   sync.Mutex
 	byID map[string]account.Account
+	mu   sync.Mutex
 }
 
 func newAccountLookup() *fakeAccountLookup {
@@ -834,8 +833,7 @@ func TestRemoveBlock_HappyPath(t *testing.T) {
 // --- sanity ---------------------------------------------------------------
 
 var _ listing.Repository = (*memRepo)(nil)
-var _ account.Account    = account.Account{}
-var _ error              = errors.New("placeholder")
+var _ account.Account = account.Account{}
 
 // --- coverage boost: list/get public paths ---------------------------------
 
@@ -1088,25 +1086,25 @@ func TestValidate_Bounds(t *testing.T) {
 	t.Parallel()
 	base := makeListingDraft("owner-1")
 	cases := []struct {
-		name string
 		mut  func(*listing.Listing)
+		name string
 	}{
-		{"empty title", func(l *listing.Listing) { l.Title = "" }},
-		{"title too long", func(l *listing.Listing) { l.Title = strings.Repeat("x", 121) }},
-		{"empty desc", func(l *listing.Listing) { l.Description = "" }},
-		{"desc too long", func(l *listing.Listing) { l.Description = strings.Repeat("x", 4001) }},
-		{"unknown category", func(l *listing.Listing) { l.Category = listing.Category("nope") }},
-		{"empty city", func(l *listing.Listing) { l.PickupCity = "" }},
-		{"neighborhood too long", func(l *listing.Listing) { l.PickupNeighborhood = strings.Repeat("x", 81) }},
-		{"hourly price unit bad", func(l *listing.Listing) { l.PriceUnit = listing.PriceUnit("week") }},
-		{"price zero", func(l *listing.Listing) { l.PriceAmountCents = 0 }},
-		{"price too high", func(l *listing.Listing) { l.PriceAmountCents = 200_000_000 }},
-		{"negative deposit", func(l *listing.Listing) { l.DepositCents = -1 }},
-		{"negative lead", func(l *listing.Listing) { l.MinLeadTimeHours = -1 }},
-		{"op hourly too high", func(l *listing.Listing) { l.Operator.HourlyRateCents = 200_000_000 }},
-		{"op min hours negative", func(l *listing.Listing) { l.Operator.MinHours = -1 }},
-		{"op name too long", func(l *listing.Listing) { l.Operator.Identity.Name = strings.Repeat("x", 81) }},
-		{"op phone too long", func(l *listing.Listing) { l.Operator.Identity.Phone = strings.Repeat("1", 33) }},
+		{name: "empty title", mut: func(l *listing.Listing) { l.Title = "" }},
+		{name: "title too long", mut: func(l *listing.Listing) { l.Title = strings.Repeat("x", 121) }},
+		{name: "empty desc", mut: func(l *listing.Listing) { l.Description = "" }},
+		{name: "desc too long", mut: func(l *listing.Listing) { l.Description = strings.Repeat("x", 4001) }},
+		{name: "unknown category", mut: func(l *listing.Listing) { l.Category = listing.Category("nope") }},
+		{name: "empty city", mut: func(l *listing.Listing) { l.PickupCity = "" }},
+		{name: "neighborhood too long", mut: func(l *listing.Listing) { l.PickupNeighborhood = strings.Repeat("x", 81) }},
+		{name: "hourly price unit bad", mut: func(l *listing.Listing) { l.PriceUnit = listing.PriceUnit("week") }},
+		{name: "price zero", mut: func(l *listing.Listing) { l.PriceAmountCents = 0 }},
+		{name: "price too high", mut: func(l *listing.Listing) { l.PriceAmountCents = 200_000_000 }},
+		{name: "negative deposit", mut: func(l *listing.Listing) { l.DepositCents = -1 }},
+		{name: "negative lead", mut: func(l *listing.Listing) { l.MinLeadTimeHours = -1 }},
+		{name: "op hourly too high", mut: func(l *listing.Listing) { l.Operator.HourlyRateCents = 200_000_000 }},
+		{name: "op min hours negative", mut: func(l *listing.Listing) { l.Operator.MinHours = -1 }},
+		{name: "op name too long", mut: func(l *listing.Listing) { l.Operator.Identity.Name = strings.Repeat("x", 81) }},
+		{name: "op phone too long", mut: func(l *listing.Listing) { l.Operator.Identity.Phone = strings.Repeat("1", 33) }},
 	}
 	for _, c := range cases {
 		c := c

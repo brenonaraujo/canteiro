@@ -29,6 +29,7 @@ const (
 // State is the listing lifecycle exposed in the API.
 type State string
 
+// Listing lifecycle states.
 const (
 	StateDraft     State = "draft"
 	StatePublished State = "published"
@@ -39,6 +40,7 @@ const (
 // agricultural) vs heavy (trator/guindaste and equivalents).
 type Size string
 
+// Publication size groups.
 const (
 	SizeLight Size = "light"
 	SizeHeavy Size = "heavy"
@@ -48,6 +50,7 @@ const (
 // in the database; we mirror it here as constants for compile-time checks.
 type Category string
 
+// Closed set of listing categories.
 const (
 	CategoryManual            Category = "manual"
 	CategoryElectric          Category = "electric"
@@ -76,6 +79,7 @@ func (c Category) Size() Size {
 // PriceUnit is hour or day.
 type PriceUnit string
 
+// Supported price units.
 const (
 	PriceHour PriceUnit = "hour"
 	PriceDay  PriceUnit = "day"
@@ -89,6 +93,7 @@ func (p PriceUnit) Valid() bool {
 // OperatorMode is none / optional / required per SPEC §4.9.
 type OperatorMode string
 
+// Operator requirement modes per SPEC §4.9.
 const (
 	OperatorNone     OperatorMode = "none"
 	OperatorOptional OperatorMode = "optional"
@@ -108,15 +113,15 @@ func (o OperatorMode) Valid() bool {
 // `IsOwner` distinguishes the "owner's own operator service" from a
 // named third party.
 type OperatorIdentity struct {
-	Name     string
-	Phone    string
-	IsOwner  bool
+	Name    string
+	Phone   string
+	IsOwner bool
 }
 
 // Rules is the owner-declared eligibility + behaviour rules.
 type Rules struct {
-	DocumentRequired   bool
 	MinAge             int
+	DocumentRequired   bool
 	ExperienceRequired bool
 	TravelRestricted   bool
 }
@@ -126,52 +131,52 @@ type Rules struct {
 // non-empty geographic descriptor; an empty coverage with `Enabled=true`
 // is rejected at publish time (EC-8).
 type Delivery struct {
-	Enabled  bool
 	Coverage string
+	Enabled  bool
 }
 
 // Block is an owner-defined availability block. F3 will introduce
 // booking-derived blocks but the calendar invariant (no overlapping
 // blocks for the same listing) lives in F2.
 type Block struct {
-	ID        string
-	ListingID string
 	StartsAt  time.Time
 	EndsAt    time.Time
-	Reason    string
 	CreatedAt time.Time
+	ID        string
+	ListingID string
+	Reason    string
 }
 
 // Listing is the F2 aggregate root. Photos live on a child slice for
 // persistence but are part of the entity model.
 type Listing struct {
-	ID                  string
-	OwnerAccountID      string
-	State               State
-	Title               string
-	Description         string
-	Category            Category
-	PickupCity          string
-	PickupNeighborhood  string
-	Delivery            Delivery
-	PriceUnit           PriceUnit
-	PriceAmountCents    int64
-	DepositCents        int64
-	MinLeadTimeHours    int
-	Photos              []string
-	Rules               Rules
-	Operator            Operator
-	HeavyLegalCession   bool
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	ID                 string
+	PickupCity         string
+	PickupNeighborhood string
+	OwnerAccountID     string
+	State              State
+	Category           Category
+	PriceUnit          PriceUnit
+	Description        string
+	Title              string
+	Photos             []string
+	Delivery           Delivery
+	Operator           Operator
+	Rules              Rules
+	PriceAmountCents   int64
+	DepositCents       int64
+	MinLeadTimeHours   int
+	HeavyLegalCession  bool
 }
 
 // Operator is the operator declaration (mode + optional service details).
 type Operator struct {
-	Mode             OperatorMode
-	HourlyRateCents  int64
-	MinHours         int
-	Identity         OperatorIdentity
+	Mode            OperatorMode
+	Identity        OperatorIdentity
+	HourlyRateCents int64
+	MinHours        int
 }
 
 // OwnerOnboarding captures the owner-side pre-publish onboarding state.
@@ -202,9 +207,9 @@ func (o OwnerOnboarding) TermsAccepted(currentVersion string) bool {
 // CategoryConfig is the deposit-minimum config for a category, mirrored
 // from the `listing_categories` table.
 type CategoryConfig struct {
-	Category         Category
-	Size             Size
-	DepositMinCents  int64
+	Category        Category
+	Size            Size
+	DepositMinCents int64
 }
 
 // Validate normalises (trim) and checks basic invariants. It does NOT
@@ -215,6 +220,16 @@ func (l Listing) Validate() error {
 	l.PickupCity = strings.TrimSpace(l.PickupCity)
 	l.PickupNeighborhood = strings.TrimSpace(l.PickupNeighborhood)
 	l.Delivery.Coverage = strings.TrimSpace(l.Delivery.Coverage)
+	if err := l.validateTextLengths(); err != nil {
+		return err
+	}
+	if err := l.validatePriceAndDeposit(); err != nil {
+		return err
+	}
+	return l.validateOperator()
+}
+
+func (l Listing) validateTextLengths() error {
 	if utf8.RuneCountInString(l.Title) < minTitle || utf8.RuneCountInString(l.Title) > maxTitle {
 		return ErrInvalidInput
 	}
@@ -233,6 +248,10 @@ func (l Listing) Validate() error {
 	if l.Delivery.Enabled && utf8.RuneCountInString(l.Delivery.Coverage) == 0 {
 		return ErrInvalidInput
 	}
+	return nil
+}
+
+func (l Listing) validatePriceAndDeposit() error {
 	if !l.PriceUnit.Valid() || l.PriceAmountCents <= 0 || l.PriceAmountCents > maxPriceCents {
 		return ErrInvalidInput
 	}
@@ -242,6 +261,10 @@ func (l Listing) Validate() error {
 	if l.MinLeadTimeHours < 0 {
 		return ErrInvalidInput
 	}
+	return nil
+}
+
+func (l Listing) validateOperator() error {
 	if l.Operator.HourlyRateCents < 0 || l.Operator.HourlyRateCents > maxHourlyRateCents {
 		return ErrInvalidInput
 	}
