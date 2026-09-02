@@ -17,12 +17,12 @@ import (
 // --- fakes ---------------------------------------------------------------
 
 type fakeRepo struct {
-	mu        sync.Mutex
-	rentals   map[string]rental.Rental
-	intents   map[string]rentsvc.PaymentIntent
-	webhooks  map[string]rentsvc.WebhookEvent
-	receipts  map[string]rental.Receipt
-	blocks    map[string][]rentsvc.Block
+	rentals  map[string]rental.Rental
+	intents  map[string]rentsvc.PaymentIntent
+	webhooks map[string]rentsvc.WebhookEvent
+	receipts map[string]rental.Receipt
+	blocks   map[string][]rentsvc.Block
+	mu       sync.Mutex
 }
 
 func newFakeRepo() *fakeRepo {
@@ -251,9 +251,9 @@ func (f *fakeAccounts) GetByID(_ context.Context, id string) (account.Account, e
 }
 
 type fakeProvider struct {
-	mu          sync.Mutex
 	intents     map[string]rentsvc.CreateIntentResponse
 	createCalls int
+	mu          sync.Mutex
 }
 
 func newFakeProvider() *fakeProvider {
@@ -310,17 +310,26 @@ func publishedListing(id, ownerName string, mode string) listing.Listing {
 	}
 }
 
-func newService(t *testing.T, repo rentsvc.Repository, l Listing, a Account, p rentsvc.PaymentProvider, opts ...func(*rentsvc.Config)) *rentsvc.Service {
+type Listing = rentsvc.ListingLookup
+type Account = rentsvc.AccountLookup
+
+// serviceDeps bundles the collaborators a service test needs so the helper
+// stays under revive's argument-limit (collaborators are typically 4).
+type serviceDeps struct {
+	Repo     rentsvc.Repository
+	Listing  Listing
+	Account  Account
+	Provider rentsvc.PaymentProvider
+}
+
+func newService(t *testing.T, d serviceDeps, opts ...func(*rentsvc.Config)) *rentsvc.Service {
 	t.Helper()
 	cfg := rentsvc.Config{}
 	for _, o := range opts {
 		o(&cfg)
 	}
-	return rentsvc.NewService(repo, l, a, p, cfg)
+	return rentsvc.NewService(d.Repo, d.Listing, d.Account, d.Provider, cfg)
 }
-
-type Listing = rentsvc.ListingLookup
-type Account = rentsvc.AccountLookup
 
 // --- tests ---------------------------------------------------------------
 
@@ -331,7 +340,7 @@ func TestCreateIntent_HappyPath(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -354,7 +363,7 @@ func TestCreateIntent_RejectsOverlap_EC1(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1"), "T2": activeTenant("T2")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -381,7 +390,7 @@ func TestCreateIntent_AcceptsNonOverlappingWindow(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1"), "T2": activeTenant("T2")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -403,7 +412,7 @@ func TestCreateIntent_RejectsOperatorTermsRequired_AC5(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -421,7 +430,7 @@ func TestCreateIntent_IdempotentOnRetry(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -444,7 +453,7 @@ func TestHandleWebhookEvent_AuthorizesAndPersistsReceipt_AC5_AC6(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 		c.AcceptanceWindow = 12 * time.Hour
 	})
@@ -477,7 +486,7 @@ func TestHandleWebhookEvent_EC4_RejectsAmountMismatch(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -503,7 +512,7 @@ func TestHandleWebhookEvent_EC2_DuplicateEvent_NoOp(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -531,7 +540,7 @@ func TestAccept_Within12hWindow_AC6(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 		c.AcceptanceWindow = 12 * time.Hour
 	})
@@ -559,7 +568,7 @@ func TestAccept_AfterDeadline_EC5(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 		c.AcceptanceWindow = 12 * time.Hour
 	})
@@ -574,7 +583,7 @@ func TestAccept_AfterDeadline_EC5(t *testing.T) {
 		Provider: "noop", ProviderEventID: "evt_b", EventType: "payment.authorized",
 		RentalID: r.ID, AmountCents: expected,
 	}))
-	svc2 := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc2 := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now.Add(13 * time.Hour) }
 		c.AcceptanceWindow = 12 * time.Hour
 	})
@@ -589,7 +598,7 @@ func TestDecline_FromAuthorized(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -618,7 +627,7 @@ func TestExpireSweep_FlagsOverdue(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 		c.AcceptanceWindow = 12 * time.Hour
 	})
@@ -648,7 +657,7 @@ func TestAuthorizeIntent_CreatesPSPIntentAndIsIdempotent_EC2(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 	})
 	start := now.Add(2 * time.Hour)
@@ -677,7 +686,7 @@ func TestExpireSweep_IdempotentOnAlreadyTerminal(t *testing.T) {
 	fa := &fakeAccounts{byID: map[string]account.Account{"T1": activeTenant("T1")}}
 	fp := newFakeProvider()
 	now := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
-	svc := newService(t, repo, fl, fa, fp, func(c *rentsvc.Config) {
+	svc := newService(t, serviceDeps{Repo: repo, Listing: fl, Account: fa, Provider: fp}, func(c *rentsvc.Config) {
 		c.Now = func() time.Time { return now }
 		c.AcceptanceWindow = 12 * time.Hour
 	})

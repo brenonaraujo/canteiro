@@ -21,6 +21,13 @@ package rental
 //	authorized/confirmed → refunded       (post-capture refund; F4 owns the policy)
 type State string
 
+// Rental lifecycle states. StatePending is the initial state right after
+// CreateIntent persists a reservation; StateAuthorized follows a successful
+// payment authorization; StateConfirmed is the post-acceptance terminal
+// state of the happy path; StateDeclined/StateExpired cover the
+// owner-refused and 12h-window-timeout branches; StateCancelled and
+// StateRefunded cover the post-authorization negative paths (F4 may extend
+// the policy for partial refunds).
 const (
 	StatePending    State = "pending"
 	StateAuthorized State = "authorized"

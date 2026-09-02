@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -54,9 +55,9 @@ func TestNoop_CreateIntentIsIdempotent(t *testing.T) {
 	t.Parallel()
 	n := NewNoop()
 	req := rental.CreateIntentRequest{IdempotencyKey: "key-1"}
-	r1, err := n.CreateIntent(nil, req)
+	r1, err := n.CreateIntent(context.TODO(), req)
 	require.NoError(t, err)
-	r2, err := n.CreateIntent(nil, req)
+	r2, err := n.CreateIntent(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, r1.ProviderPaymentID, r2.ProviderPaymentID)
 }

@@ -279,15 +279,15 @@ func (s listingServer) UpdateOwnerOnboarding(c *gin.Context) { s.api.UpdateOwner
 func (s listingServer) ListCategories(c *gin.Context)        { s.api.ListCategories(c) }
 
 // F3 stubs (out of scope for listing tests).
-func (listingServer) CreateRental(*gin.Context)                                { panic("unused") }
-func (listingServer) ListMyRentals(*gin.Context)                               { panic("unused") }
-func (listingServer) GetRental(*gin.Context, openapiUUID)                     { panic("unused") }
-func (listingServer) AuthorizeRentalPayment(*gin.Context, openapiUUID)        { panic("unused") }
-func (listingServer) AcceptRental(*gin.Context, openapiUUID)                  { panic("unused") }
-func (listingServer) DeclineRental(*gin.Context, openapiUUID)                 { panic("unused") }
-func (listingServer) CancelRental(*gin.Context, openapiUUID)                  { panic("unused") }
-func (listingServer) GetRentalReceipt(*gin.Context, openapiUUID)              { panic("unused") }
-func (listingServer) PaymentWebhook(*gin.Context, api.PaymentWebhookParams)   { panic("unused") }
+func (listingServer) CreateRental(*gin.Context)                             { panic("unused") }
+func (listingServer) ListMyRentals(*gin.Context)                            { panic("unused") }
+func (listingServer) GetRental(*gin.Context, openapiUUID)                   { panic("unused") }
+func (listingServer) AuthorizeRentalPayment(*gin.Context, openapiUUID)      { panic("unused") }
+func (listingServer) AcceptRental(*gin.Context, openapiUUID)                { panic("unused") }
+func (listingServer) DeclineRental(*gin.Context, openapiUUID)               { panic("unused") }
+func (listingServer) CancelRental(*gin.Context, openapiUUID)                { panic("unused") }
+func (listingServer) GetRentalReceipt(*gin.Context, openapiUUID)            { panic("unused") }
+func (listingServer) PaymentWebhook(*gin.Context, api.PaymentWebhookParams) { panic("unused") }
 func (s listingServer) SearchCatalog(c *gin.Context, p api.SearchCatalogParams) {
 	s.api.SearchCatalog(c, p)
 }

@@ -1,7 +1,6 @@
 package rental
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,11 +12,11 @@ const DefaultCommissionBPS int64 = 1200
 
 // QuoteInput is the input to the pricing pipeline.
 type QuoteInput struct {
-	Snapshot      ListingSnapshot
 	StartsAt      time.Time
 	EndsAt        time.Time
-	WithOperator  bool
+	Snapshot      ListingSnapshot
 	CommissionBPS int64
+	WithOperator  bool
 }
 
 // PriceQuote is the F3 pricing pipeline (skill: pre-implementation-design —
@@ -41,14 +40,14 @@ func PriceQuote(in QuoteInput) (MoneyBreakdown, error) {
 	commission := applyCommission(commissionable, effectiveBPS(in.CommissionBPS))
 	owner, op := splitLiquids(rent, operator, in.Snapshot, commission)
 	return MoneyBreakdown{
-		RentCents:             rent,
-		OperatorCents:         operator,
-		DepositCents:          deposit,
-		TotalCents:            total,
-		CommissionBaseCents:   commissionable,
-		CommissionCents:       commission,
-		OwnerPayoutCents:      owner,
-		OperatorPayoutCents:   op,
+		RentCents:           rent,
+		OperatorCents:       operator,
+		DepositCents:        deposit,
+		TotalCents:          total,
+		CommissionBaseCents: commissionable,
+		CommissionCents:     commission,
+		OwnerPayoutCents:    owner,
+		OperatorPayoutCents: op,
 	}, nil
 }
 
@@ -153,20 +152,23 @@ func ReceiptFromRental(r Rental, b MoneyBreakdown) Receipt {
 
 // Receipt is the tenant-visible write-once snapshot.
 type Receipt struct {
-	RentalID            string          `json:"rental_id"`
-	TenantAccountID     string          `json:"tenant_account_id"`
-	RentCents           int64           `json:"rent_cents"`
-	OperatorCents       int64           `json:"operator_cents"`
-	DepositCents        int64           `json:"deposit_cents"`
-	TotalCents          int64           `json:"total_cents"`
-	CommissionBaseCents int64           `json:"commission_base_cents"`
-	CommissionCents     int64           `json:"commission_cents"`
-	OwnerPayoutCents    int64           `json:"owner_payout_cents"`
-	OperatorPayoutCents int64           `json:"operator_payout_cents"`
-	ListingSnapshot     ListingSnapshot `json:"listing_snapshot"`
-	WindowStartsAt      time.Time       `json:"window_starts_at"`
-	WindowEndsAt        time.Time       `json:"window_ends_at"`
-	IssuedAt            time.Time       `json:"issued_at"`
+	WindowStartsAt time.Time `json:"window_starts_at"`
+	WindowEndsAt   time.Time `json:"window_ends_at"`
+	IssuedAt       time.Time `json:"issued_at"`
+
+	RentalID        string `json:"rental_id"`
+	TenantAccountID string `json:"tenant_account_id"`
+
+	ListingSnapshot ListingSnapshot `json:"listing_snapshot"`
+
+	RentCents           int64 `json:"rent_cents"`
+	OperatorCents       int64 `json:"operator_cents"`
+	DepositCents        int64 `json:"deposit_cents"`
+	TotalCents          int64 `json:"total_cents"`
+	CommissionBaseCents int64 `json:"commission_base_cents"`
+	CommissionCents     int64 `json:"commission_cents"`
+	OwnerPayoutCents    int64 `json:"owner_payout_cents"`
+	OperatorPayoutCents int64 `json:"operator_payout_cents"`
 }
 
 func effectiveBPS(bps int64) int64 {
@@ -175,6 +177,3 @@ func effectiveBPS(bps int64) int64 {
 	}
 	return bps
 }
-
-// errPriceNotImplemented is a sentinel kept for future pricing modes.
-var errPriceNotImplemented = errors.New("rental: pricing mode not implemented")

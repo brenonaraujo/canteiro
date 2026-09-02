@@ -11,8 +11,8 @@ import (
 
 	"github.com/brenonaraujo/canteiro/backend/internal/api"
 	"github.com/brenonaraujo/canteiro/backend/internal/domain/rental"
-	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
 	"github.com/brenonaraujo/canteiro/backend/internal/i18n"
+	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
 )
 
 // PaymentAPI wires the F3 payment webhook. The endpoint is intentionally
@@ -46,7 +46,7 @@ func (h *PaymentAPI) PaymentWebhook(c *gin.Context, params api.PaymentWebhookPar
 		return
 	}
 	var ev api.PaymentWebhookEvent
-	if err := json.Unmarshal(body, &ev); err != nil {
+	if err = json.Unmarshal(body, &ev); err != nil {
 		h.writeErr(c, http.StatusBadRequest, "invalid_json", "payment.invalid_json")
 		return
 	}

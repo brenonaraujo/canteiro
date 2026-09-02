@@ -31,42 +31,47 @@ type Repository interface {
 
 // PaymentIntent is the persisted representation of a PSP intent.
 type PaymentIntent struct {
-	ID                  string
-	RentalID            string
-	Provider            string
-	ProviderPaymentID   string
-	IdempotencyKey      string
-	Attempt             int
-	AmountCents         int64
-	DepositCents        int64
-	ExpectedTotalCents  int64
-	Status              string
-	FailureCode         string
-	FailureMessage      string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
+
+	ID                string
+	RentalID          string
+	Provider          string
+	ProviderPaymentID string
+	IdempotencyKey    string
+	Status            string
+	FailureCode       string
+	FailureMessage    string
+
+	Attempt            int
+	AmountCents        int64
+	DepositCents       int64
+	ExpectedTotalCents int64
 }
 
 // WebhookEvent is the persisted record of a PSP event.
 type WebhookEvent struct {
+	ReceivedAt  time.Time
+	ProcessedAt *time.Time
+
 	ID              string
 	Provider        string
 	ProviderEventID string
 	EventType       string
 	RentalID        string
 	PaymentIntentID string
-	Payload         []byte
-	SignatureValid  bool
-	ReceivedAt      time.Time
-	ProcessedAt     *time.Time
+
+	Payload []byte
+
+	SignatureValid bool
 }
 
 // Block is a thin wrapper around listing.Block.
 type Block struct {
-	ID        string
-	ListingID string
 	StartsAt  time.Time
 	EndsAt    time.Time
+	ID        string
+	ListingID string
 }
 
 // ListingLookup is the slice of listing.Service this service needs.
@@ -86,14 +91,14 @@ type IDGenerator interface {
 
 // Config holds the knobs the service reads from the platform env.
 type Config struct {
-	AcceptanceWindow   time.Duration
-	CommissionBPS      int64
-	MinLeadTime        time.Duration
+	IDGen              IDGenerator
+	Now                func() time.Time
 	DefaultCurrency    string
 	ProviderName       string
 	ProviderWebhookKey string
-	Now                func() time.Time
-	IDGen              IDGenerator
+	AcceptanceWindow   time.Duration
+	MinLeadTime        time.Duration
+	CommissionBPS      int64
 }
 
 // Defaults fills the zero-valued fields with the documented defaults.
@@ -135,13 +140,13 @@ type PaymentProvider interface {
 
 // CreateIntentRequest is the input to the PSP.
 type CreateIntentRequest struct {
+	Metadata         map[string]string
 	RentalID         string
 	IdempotencyKey   string
-	AmountCents      int64
-	DepositCents     int64
 	Currency         string
 	AcceptanceWindow time.Duration
-	Metadata         map[string]string
+	AmountCents      int64
+	DepositCents     int64
 }
 
 // CreateIntentResponse is the PSP's response.
@@ -155,16 +160,16 @@ type CreateIntentResponse struct {
 
 // ProviderWebhookEvent is the (already-verified) PSP event.
 type ProviderWebhookEvent struct {
-	Provider         string
-	ProviderEventID  string
-	EventType        string
-	RentalID         string
-	PaymentIntentID  string
-	AmountCents      int64
-	DepositCents     int64
-	FailureCode      string
-	FailureMessage   string
-	Authorized       bool
+	Provider        string
+	ProviderEventID string
+	EventType       string
+	RentalID        string
+	PaymentIntentID string
+	FailureCode     string
+	FailureMessage  string
+	AmountCents     int64
+	DepositCents    int64
+	Authorized      bool
 }
 
 // NewService builds the service with default config filled in.
@@ -229,15 +234,15 @@ func (s *Service) requirePublishedListingSnapshot(ctx context.Context, listingID
 		return listing.Listing{}, rental.ListingSnapshot{}, rental.ErrListingUnavailable
 	}
 	snap := rental.ListingSnapshot{
-		OwnerID:            l.OwnerAccountID,
-		Title:              l.Title,
-		Category:           string(l.Category),
-		PriceUnit:          string(l.PriceUnit),
-		PriceAmountCents:   l.PriceAmountCents,
-		DepositCents:       l.DepositCents,
-		MinLeadTimeHours:   l.MinLeadTimeHours,
-		PickupCity:         l.PickupCity,
-		HeavyLegalCession:  l.HeavyLegalCession,
+		OwnerID:           l.OwnerAccountID,
+		Title:             l.Title,
+		Category:          string(l.Category),
+		PriceUnit:         string(l.PriceUnit),
+		PriceAmountCents:  l.PriceAmountCents,
+		DepositCents:      l.DepositCents,
+		MinLeadTimeHours:  l.MinLeadTimeHours,
+		PickupCity:        l.PickupCity,
+		HeavyLegalCession: l.HeavyLegalCession,
 		Operator: rental.OperatorSnapshot{
 			Mode:            string(l.Operator.Mode),
 			HourlyRateCents: l.Operator.HourlyRateCents,

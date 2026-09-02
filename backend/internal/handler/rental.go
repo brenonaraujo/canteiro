@@ -3,16 +3,14 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/brenonaraujo/canteiro/backend/internal/api"
 	"github.com/brenonaraujo/canteiro/backend/internal/domain/rental"
-	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
 	"github.com/brenonaraujo/canteiro/backend/internal/i18n"
+	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
 )
 
 // RentalAPI wires the F3 rental endpoints. Mirrors the ListingAPI surface
@@ -356,17 +354,3 @@ func (h *RentalAPI) GetRentalReceipt(c *gin.Context, id openapi_types.UUID) {
 	}
 	c.JSON(http.StatusOK, receiptToAPI(rec))
 }
-
-// uuidFromString is a tiny helper exposed for tests that need to construct
-// a typed uuid without importing openapi_types directly. Kept private.
-func uuidFromString(s string) openapi_types.UUID {
-	u, err := uuid.Parse(s)
-	if err != nil {
-		return openapi_types.UUID{}
-	}
-	return openapi_types.UUID(u)
-}
-
-// timePtr is a small helper kept for future expansions (e.g. optional
-// timestamps in response shapes).
-func timePtr(t time.Time) *time.Time { return &t }

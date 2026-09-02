@@ -16,70 +16,70 @@ import (
 // canonical encoding — the repository MUST round-trip through these
 // helpers, not json.Marshal directly.
 type ListingSnapshot struct {
-	OwnerID            string           `json:"owner_id"`
-	Title              string           `json:"title"`
-	Category           string           `json:"category"`
-	PriceUnit          string           `json:"price_unit"`
-	PriceAmountCents   int64            `json:"price_amount_cents"`
-	DepositCents       int64            `json:"deposit_cents"`
-	MinLeadTimeHours   int              `json:"min_lead_time_hours"`
-	PickupCity         string           `json:"pickup_city"`
-	Operator           OperatorSnapshot `json:"operator"`
-	HeavyLegalCession  bool             `json:"heavy_legal_cession,omitempty"`
+	OwnerID           string           `json:"owner_id"`
+	Title             string           `json:"title"`
+	Category          string           `json:"category"`
+	PriceUnit         string           `json:"price_unit"`
+	PickupCity        string           `json:"pickup_city"`
+	Operator          OperatorSnapshot `json:"operator"`
+	PriceAmountCents  int64            `json:"price_amount_cents"`
+	DepositCents      int64            `json:"deposit_cents"`
+	MinLeadTimeHours  int              `json:"min_lead_time_hours"`
+	HeavyLegalCession bool             `json:"heavy_legal_cession,omitempty"`
 }
 
 // OperatorSnapshot mirrors the F2 listing.Operator shape.
 type OperatorSnapshot struct {
-	Mode             string `json:"mode"`
-	HourlyRateCents  int64  `json:"hourly_rate_cents"`
-	MinHours         int    `json:"min_hours"`
-	Name             string `json:"name,omitempty"`
-	Phone            string `json:"phone,omitempty"`
-	IsOwner          bool   `json:"is_owner"`
+	Mode            string `json:"mode"`
+	Name            string `json:"name,omitempty"`
+	Phone           string `json:"phone,omitempty"`
+	HourlyRateCents int64  `json:"hourly_rate_cents"`
+	MinHours        int    `json:"min_hours"`
+	IsOwner         bool   `json:"is_owner"`
 }
 
 // MoneyBreakdown is the canonical pricing output for a rental.
 type MoneyBreakdown struct {
-	RentCents      int64 `json:"rent_cents"`
-	OperatorCents  int64 `json:"operator_cents"`
-	DepositCents   int64 `json:"deposit_cents"`
-	TotalCents     int64 `json:"total_cents"`
+	RentCents           int64 `json:"rent_cents"`
+	OperatorCents       int64 `json:"operator_cents"`
+	DepositCents        int64 `json:"deposit_cents"`
+	TotalCents          int64 `json:"total_cents"`
 	CommissionBaseCents int64 `json:"commission_base_cents"`
 	CommissionCents     int64 `json:"commission_cents"`
-	OwnerPayoutCents     int64 `json:"owner_payout_cents"`
-	OperatorPayoutCents  int64 `json:"operator_payout_cents"`
+	OwnerPayoutCents    int64 `json:"owner_payout_cents"`
+	OperatorPayoutCents int64 `json:"operator_payout_cents"`
 }
 
 // Rental is the domain entity.
 type Rental struct {
-	ID                  string          `json:"id"`
-	ListingID           string          `json:"listing_id"`
-	TenantAccountID     string          `json:"tenant_account_id"`
-	ListingSnapshot     ListingSnapshot `json:"listing_snapshot"`
-
-	RentCents      int64 `json:"rent_cents"`
-	OperatorCents  int64 `json:"operator_cents"`
-	DepositCents   int64 `json:"deposit_cents"`
-	CommissionCents int64 `json:"commission_cents"`
-	OwnerPayoutCents int64 `json:"owner_payout_cents"`
-	OperatorPayoutCents int64 `json:"operator_payout_cents"`
-
-	StartsAt  time.Time `json:"starts_at"`
-	EndsAt    time.Time `json:"ends_at"`
-	WithOperator bool `json:"with_operator"`
-	OperatorTermsAccepted bool `json:"operator_terms_accepted"`
-
-	State State `json:"state"`
-
 	AcceptanceDeadlineAt *time.Time `json:"acceptance_deadline_at,omitempty"`
 	ConfirmedAt          *time.Time `json:"confirmed_at,omitempty"`
 	DeclinedAt           *time.Time `json:"declined_at,omitempty"`
-	DeclineReason        string     `json:"decline_reason,omitempty"`
 
-	IntentKey        string    `json:"intent_key"`
-	TenantClaimDebt  string    `json:"tenant_claim_debt"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	StartsAt  time.Time `json:"starts_at"`
+	EndsAt    time.Time `json:"ends_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	ID              string `json:"id"`
+	ListingID       string `json:"listing_id"`
+	TenantAccountID string `json:"tenant_account_id"`
+	State           State  `json:"state"`
+	DeclineReason   string `json:"decline_reason,omitempty"`
+	IntentKey       string `json:"intent_key"`
+	TenantClaimDebt string `json:"tenant_claim_debt"`
+
+	ListingSnapshot ListingSnapshot `json:"listing_snapshot"`
+
+	RentCents           int64 `json:"rent_cents"`
+	OperatorCents       int64 `json:"operator_cents"`
+	DepositCents        int64 `json:"deposit_cents"`
+	CommissionCents     int64 `json:"commission_cents"`
+	OwnerPayoutCents    int64 `json:"owner_payout_cents"`
+	OperatorPayoutCents int64 `json:"operator_payout_cents"`
+
+	WithOperator          bool `json:"with_operator"`
+	OperatorTermsAccepted bool `json:"operator_terms_accepted"`
 }
 
 // HasOverlap reports whether [aStart, aEnd) intersects [bStart, bEnd).

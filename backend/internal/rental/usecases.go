@@ -10,10 +10,10 @@ import (
 
 // CreateIntentInput is the service-layer input for the "create reservation intent" use case.
 type CreateIntentInput struct {
-	TenantID              string
-	ListingID             string
 	StartsAt              time.Time
 	EndsAt                time.Time
+	TenantID              string
+	ListingID             string
 	WithOperator          bool
 	OperatorTermsAccepted bool
 }
@@ -27,10 +27,10 @@ func (s *Service) CreateIntent(ctx context.Context, in CreateIntentInput) (renta
 	if err != nil {
 		return rental.Rental{}, rental.MoneyBreakdown{}, err
 	}
-	if err := rental.ValidateWindow(in.StartsAt, in.EndsAt, s.cfg.Now(), time.Duration(snap.MinLeadTimeHours)*time.Hour); err != nil {
+	if err = rental.ValidateWindow(in.StartsAt, in.EndsAt, s.cfg.Now(), time.Duration(snap.MinLeadTimeHours)*time.Hour); err != nil {
 		return rental.Rental{}, rental.MoneyBreakdown{}, err
 	}
-	if err := s.requireNoOverlap(ctx, in.ListingID, in.StartsAt, in.EndsAt); err != nil {
+	if err = s.requireNoOverlap(ctx, in.ListingID, in.StartsAt, in.EndsAt); err != nil {
 		return rental.Rental{}, rental.MoneyBreakdown{}, err
 	}
 	if snap.Operator.Mode == "required" && !in.OperatorTermsAccepted {
@@ -50,22 +50,34 @@ func (s *Service) CreateIntent(ctx context.Context, in CreateIntentInput) (renta
 		return rental.Rental{}, rental.MoneyBreakdown{}, err
 	}
 	key := intentKeyFromWindow(in.ListingID, in.StartsAt, in.EndsAt)
-	if existing, found, err := s.repo.GetByIntentKey(ctx, in.TenantID, in.ListingID, key); err != nil {
+	var existing rental.Rental
+	var hb rental.MoneyBreakdown
+	existing, hb, found, err := s.lookupExistingIntent(ctx, in.TenantID, in.ListingID, key)
+	if err != nil {
 		return rental.Rental{}, rental.MoneyBreakdown{}, err
-	} else if found {
-		existingBreakdown := rental.MoneyBreakdown{
-			RentCents:           existing.RentCents,
-			OperatorCents:       existing.OperatorCents,
-			DepositCents:        existing.DepositCents,
-			CommissionCents:     existing.CommissionCents,
-			OwnerPayoutCents:    existing.OwnerPayoutCents,
-			OperatorPayoutCents: existing.OperatorPayoutCents,
-		}
-		existingBreakdown.TotalCents = existing.RentCents + existing.OperatorCents + existing.DepositCents
-		existingBreakdown.CommissionBaseCents = existing.RentCents + existing.OperatorCents
-		return existing, existingBreakdown, nil
 	}
-	r := rental.Rental{
+	if found {
+		return existing, hb, nil
+	}
+	r := s.newPendingRental(in, snap, key)
+	breakdown.ApplyToRental(&r)
+	snapBytes, err := rental.MarshalSnapshot(snap)
+	if err != nil {
+		return rental.Rental{}, rental.MoneyBreakdown{}, err
+	}
+	persisted, err := s.repo.CreateIntent(ctx, r, snapBytes)
+	if err != nil {
+		return rental.Rental{}, rental.MoneyBreakdown{}, err
+	}
+	return persisted, breakdown, nil
+}
+
+// newPendingRental assembles the immutable initial Rental for a freshly
+// created intent. IDs, timestamps, and the deterministic intent key live
+// here; pricing fields are written separately by breakdown.ApplyToRental.
+func (s *Service) newPendingRental(in CreateIntentInput, snap rental.ListingSnapshot, key string) rental.Rental {
+	now := s.cfg.Now()
+	return rental.Rental{
 		ID:                    s.cfg.IDGen.String(),
 		ListingID:             in.ListingID,
 		TenantAccountID:       in.TenantID,
@@ -77,19 +89,32 @@ func (s *Service) CreateIntent(ctx context.Context, in CreateIntentInput) (renta
 		State:                 rental.StatePending,
 		IntentKey:             key,
 		TenantClaimDebt:       "none",
-		CreatedAt:             s.cfg.Now(),
-		UpdatedAt:             s.cfg.Now(),
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
-	breakdown.ApplyToRental(&r)
-	snapBytes, err := rental.MarshalSnapshot(snap)
-	if err != nil {
-		return rental.Rental{}, rental.MoneyBreakdown{}, err
+}
+
+// lookupExistingIntent returns the rental matching an idempotency key along
+// with its hydrated MoneyBreakdown. found=false means the caller should
+// create a new intent. Hydration of TotalCents/CommissionBaseCents mirrors
+// the projection used by Read APIs — kept local so future schema changes
+// stay isolated.
+func (s *Service) lookupExistingIntent(ctx context.Context, tenantID, listingID, key string) (rental.Rental, rental.MoneyBreakdown, bool, error) {
+	existing, found, err := s.repo.GetByIntentKey(ctx, tenantID, listingID, key)
+	if err != nil || !found {
+		return rental.Rental{}, rental.MoneyBreakdown{}, found, err
 	}
-	persisted, err := s.repo.CreateIntent(ctx, r, snapBytes)
-	if err != nil {
-		return rental.Rental{}, rental.MoneyBreakdown{}, err
+	hb := rental.MoneyBreakdown{
+		RentCents:           existing.RentCents,
+		OperatorCents:       existing.OperatorCents,
+		DepositCents:        existing.DepositCents,
+		CommissionCents:     existing.CommissionCents,
+		OwnerPayoutCents:    existing.OwnerPayoutCents,
+		OperatorPayoutCents: existing.OperatorPayoutCents,
 	}
-	return persisted, breakdown, nil
+	hb.TotalCents = existing.RentCents + existing.OperatorCents + existing.DepositCents
+	hb.CommissionBaseCents = existing.RentCents + existing.OperatorCents
+	return existing, hb, true, nil
 }
 
 // AuthorizeIntentInput is the input to the payment authorization.
@@ -108,8 +133,8 @@ func (s *Service) AuthorizeIntent(ctx context.Context, in AuthorizeIntentInput) 
 	if !r.IsTenant(in.TenantID) {
 		return PaymentIntent{}, rental.ErrForbidden
 	}
-	if existing, found, err := s.repo.GetPaymentIntent(ctx, in.RentalID); err != nil {
-		return PaymentIntent{}, err
+	if existing, found, lookupErr := s.repo.GetPaymentIntent(ctx, in.RentalID); lookupErr != nil {
+		return PaymentIntent{}, lookupErr
 	} else if found {
 		return existing, nil
 	}
@@ -202,14 +227,14 @@ func (s *Service) markAuthorized(ctx context.Context, r rental.Rental, ev Provid
 		return err
 	}
 	receipt := rental.ReceiptFromRental(updated, rental.MoneyBreakdown{
-		RentCents:             updated.RentCents,
-		OperatorCents:         updated.OperatorCents,
-		DepositCents:          updated.DepositCents,
-		TotalCents:            updated.RentCents + updated.OperatorCents + updated.DepositCents,
-		CommissionBaseCents:   updated.RentCents + updated.OperatorCents,
-		CommissionCents:       updated.CommissionCents,
-		OwnerPayoutCents:      updated.OwnerPayoutCents,
-		OperatorPayoutCents:   updated.OperatorPayoutCents,
+		RentCents:           updated.RentCents,
+		OperatorCents:       updated.OperatorCents,
+		DepositCents:        updated.DepositCents,
+		TotalCents:          updated.RentCents + updated.OperatorCents + updated.DepositCents,
+		CommissionBaseCents: updated.RentCents + updated.OperatorCents,
+		CommissionCents:     updated.CommissionCents,
+		OwnerPayoutCents:    updated.OwnerPayoutCents,
+		OperatorPayoutCents: updated.OperatorPayoutCents,
 	})
 	receipt.IssuedAt = s.cfg.Now()
 	if _, err := s.repo.SaveReceipt(ctx, receipt); err != nil {

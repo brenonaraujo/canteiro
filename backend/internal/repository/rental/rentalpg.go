@@ -23,9 +23,20 @@ type Repo struct {
 func New(db *gorm.DB) *Repo { return &Repo{DB: db} }
 
 type rentalRow struct {
+	StartsAt              time.Time  `gorm:"column:starts_at"`
+	EndsAt                time.Time  `gorm:"column:ends_at"`
+	CreatedAt             time.Time  `gorm:"column:created_at"`
+	UpdatedAt             time.Time  `gorm:"column:updated_at"`
+	AcceptanceDeadlineAt  *time.Time `gorm:"column:acceptance_deadline_at"`
+	ConfirmedAt           *time.Time `gorm:"column:confirmed_at"`
+	DeclinedAt            *time.Time `gorm:"column:declined_at"`
 	ID                    string     `gorm:"column:id;primaryKey"`
 	ListingID             string     `gorm:"column:listing_id"`
 	TenantAccountID       string     `gorm:"column:tenant_account_id"`
+	State                 string     `gorm:"column:state"`
+	DeclineReason         string     `gorm:"column:decline_reason"`
+	IntentKey             string     `gorm:"column:intent_key"`
+	TenantClaimDebt       string     `gorm:"column:tenant_claim_debt"`
 	ListingSnapshot       []byte     `gorm:"column:listing_snapshot"`
 	RentCents             int64      `gorm:"column:rent_cents"`
 	OperatorCents         int64      `gorm:"column:operator_cents"`
@@ -33,61 +44,54 @@ type rentalRow struct {
 	CommissionCents       int64      `gorm:"column:commission_cents"`
 	OwnerPayoutCents      int64      `gorm:"column:owner_payout_cents"`
 	OperatorPayoutCents   int64      `gorm:"column:operator_payout_cents"`
-	StartsAt              time.Time  `gorm:"column:starts_at"`
-	EndsAt                time.Time  `gorm:"column:ends_at"`
 	WithOperator          bool       `gorm:"column:with_operator"`
 	OperatorTermsAccepted bool       `gorm:"column:operator_terms_accepted"`
-	State                 string     `gorm:"column:state"`
-	AcceptanceDeadlineAt  *time.Time `gorm:"column:acceptance_deadline_at"`
-	ConfirmedAt           *time.Time `gorm:"column:confirmed_at"`
-	DeclinedAt            *time.Time `gorm:"column:declined_at"`
-	DeclineReason         string     `gorm:"column:decline_reason"`
-	IntentKey             string     `gorm:"column:intent_key"`
-	TenantClaimDebt       string     `gorm:"column:tenant_claim_debt"`
-	CreatedAt             time.Time  `gorm:"column:created_at"`
-	UpdatedAt             time.Time  `gorm:"column:updated_at"`
 }
 
 func (rentalRow) TableName() string { return "rentals" }
 
 type paymentIntentRow struct {
+	CreatedAt          time.Time `gorm:"column:created_at"`
+	UpdatedAt          time.Time `gorm:"column:updated_at"`
 	ID                 string    `gorm:"column:id;primaryKey"`
 	RentalID           string    `gorm:"column:rental_id"`
 	Provider           string    `gorm:"column:provider"`
 	ProviderPaymentID  string    `gorm:"column:provider_payment_id"`
 	IdempotencyKey     string    `gorm:"column:idempotency_key"`
+	Status             string    `gorm:"column:status"`
+	FailureCode        string    `gorm:"column:failure_code"`
+	FailureMessage     string    `gorm:"column:failure_message"`
 	Attempt            int       `gorm:"column:attempt"`
 	AmountCents        int64     `gorm:"column:amount_cents"`
 	DepositCents       int64     `gorm:"column:deposit_cents"`
 	ExpectedTotalCents int64     `gorm:"column:expected_total_cents"`
-	Status             string    `gorm:"column:status"`
-	FailureCode        string    `gorm:"column:failure_code"`
-	FailureMessage     string    `gorm:"column:failure_message"`
-	CreatedAt          time.Time `gorm:"column:created_at"`
-	UpdatedAt          time.Time `gorm:"column:updated_at"`
 }
 
 func (paymentIntentRow) TableName() string { return "payment_intents" }
 
 type webhookEventRow struct {
+	ReceivedAt      time.Time  `gorm:"column:received_at"`
+	RentalID        *string    `gorm:"column:rental_id"`
+	PaymentIntentID *string    `gorm:"column:payment_intent_id"`
+	ProcessedAt     *time.Time `gorm:"column:processed_at"`
 	ID              string     `gorm:"column:id;primaryKey"`
 	Provider        string     `gorm:"column:provider"`
 	ProviderEventID string     `gorm:"column:provider_event_id"`
 	EventType       string     `gorm:"column:event_type"`
-	RentalID        *string    `gorm:"column:rental_id"`
-	PaymentIntentID *string    `gorm:"column:payment_intent_id"`
 	Payload         []byte     `gorm:"column:payload"`
 	SignatureValid  bool       `gorm:"column:signature_valid"`
-	ReceivedAt      time.Time  `gorm:"column:received_at"`
-	ProcessedAt     *time.Time `gorm:"column:processed_at"`
 }
 
 func (webhookEventRow) TableName() string { return "payment_webhook_events" }
 
 type receiptRow struct {
+	WindowStartsAt      time.Time `gorm:"column:window_starts_at"`
+	WindowEndsAt        time.Time `gorm:"column:window_ends_at"`
+	IssuedAt            time.Time `gorm:"column:issued_at"`
 	ID                  string    `gorm:"column:id;primaryKey"`
 	RentalID            string    `gorm:"column:rental_id;unique"`
 	TenantAccountID     string    `gorm:"column:tenant_account_id"`
+	ListingSnapshot     []byte    `gorm:"column:listing_snapshot"`
 	RentCents           int64     `gorm:"column:rent_cents"`
 	OperatorCents       int64     `gorm:"column:operator_cents"`
 	DepositCents        int64     `gorm:"column:deposit_cents"`
@@ -96,10 +100,6 @@ type receiptRow struct {
 	CommissionCents     int64     `gorm:"column:commission_cents"`
 	OwnerPayoutCents    int64     `gorm:"column:owner_payout_cents"`
 	OperatorPayoutCents int64     `gorm:"column:operator_payout_cents"`
-	ListingSnapshot     []byte    `gorm:"column:listing_snapshot"`
-	WindowStartsAt      time.Time `gorm:"column:window_starts_at"`
-	WindowEndsAt        time.Time `gorm:"column:window_ends_at"`
-	IssuedAt            time.Time `gorm:"column:issued_at"`
 }
 
 func (receiptRow) TableName() string { return "rental_receipts" }
@@ -342,10 +342,10 @@ func (r *Repo) ListActiveOverlapping(ctx context.Context, listingID string, star
 // ListOwnerBlocks returns blocks overlapping [start, end).
 func (r *Repo) ListOwnerBlocks(ctx context.Context, listingID string, start, end time.Time) ([]rentsvc.Block, error) {
 	type blockRow struct {
-		ID        string    `gorm:"column:id"`
-		ListingID string    `gorm:"column:listing_id"`
 		StartsAt  time.Time `gorm:"column:starts_at"`
 		EndsAt    time.Time `gorm:"column:ends_at"`
+		ID        string    `gorm:"column:id"`
+		ListingID string    `gorm:"column:listing_id"`
 	}
 	var rows []blockRow
 	err := r.DB.WithContext(ctx).

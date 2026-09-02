@@ -11,19 +11,19 @@ func TestHasOverlap(t *testing.T) {
 	t.Parallel()
 	base := time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC)
 	cases := []struct {
-		name                       string
 		aStart, aEnd, bStart, bEnd time.Time
+		name                       string
 		want                       bool
 	}{
-		{"identical windows overlap", base, base.Add(2 * time.Hour), base, base.Add(2 * time.Hour), true},
-		{"a strictly before b", base, base.Add(time.Hour), base.Add(2 * time.Hour), base.Add(3 * time.Hour), false},
-		{"b strictly before a", base.Add(2 * time.Hour), base.Add(3 * time.Hour), base, base.Add(time.Hour), false},
-		{"touching at start (half-open)", base, base.Add(time.Hour), base.Add(time.Hour), base.Add(2 * time.Hour), false},
-		{"touching at end (half-open)", base, base.Add(time.Hour), base.Add(-time.Hour), base, false},
-		{"partial inner overlap", base, base.Add(3 * time.Hour), base.Add(time.Hour), base.Add(2 * time.Hour), true},
-		{"b fully inside a", base, base.Add(3 * time.Hour), base.Add(time.Hour), base.Add(2 * time.Hour), true},
-		{"degenerate a returns false", base, base, base, base.Add(time.Hour), false},
-		{"degenerate b returns false", base, base.Add(time.Hour), base, base, false},
+		{name: "identical windows overlap", aStart: base, aEnd: base.Add(2 * time.Hour), bStart: base, bEnd: base.Add(2 * time.Hour), want: true},
+		{name: "a strictly before b", aStart: base, aEnd: base.Add(time.Hour), bStart: base.Add(2 * time.Hour), bEnd: base.Add(3 * time.Hour), want: false},
+		{name: "b strictly before a", aStart: base.Add(2 * time.Hour), aEnd: base.Add(3 * time.Hour), bStart: base, bEnd: base.Add(time.Hour), want: false},
+		{name: "touching at start (half-open)", aStart: base, aEnd: base.Add(time.Hour), bStart: base.Add(time.Hour), bEnd: base.Add(2 * time.Hour), want: false},
+		{name: "touching at end (half-open)", aStart: base, aEnd: base.Add(time.Hour), bStart: base.Add(-time.Hour), bEnd: base, want: false},
+		{name: "partial inner overlap", aStart: base, aEnd: base.Add(3 * time.Hour), bStart: base.Add(time.Hour), bEnd: base.Add(2 * time.Hour), want: true},
+		{name: "b fully inside a", aStart: base, aEnd: base.Add(3 * time.Hour), bStart: base.Add(time.Hour), bEnd: base.Add(2 * time.Hour), want: true},
+		{name: "degenerate a returns false", aStart: base, aEnd: base, bStart: base, bEnd: base.Add(time.Hour), want: false},
+		{name: "degenerate b returns false", aStart: base, aEnd: base.Add(time.Hour), bStart: base, bEnd: base, want: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

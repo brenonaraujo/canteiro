@@ -15,8 +15,8 @@ import (
 
 // Noop is the in-memory provider.
 type Noop struct {
-	mu      sync.Mutex
 	intents map[string]rental.CreateIntentResponse
+	mu      sync.Mutex
 }
 
 // NewNoop builds a fresh noop provider.
@@ -46,13 +46,13 @@ func (n *Noop) VerifyWebhookSignature(_ context.Context, _ []byte, _ string) (re
 // TriggerAuthorized is a test helper.
 func (n *Noop) TriggerAuthorized(rentalID string, amountCents, depositCents int64) rental.ProviderWebhookEvent {
 	return rental.ProviderWebhookEvent{
-		Provider:         "noop",
-		ProviderEventID:  "evt_noop_" + rentalID + "_" + time.Now().UTC().Format(time.RFC3339Nano),
-		EventType:        "payment.authorized",
-		RentalID:         rentalID,
-		AmountCents:      amountCents,
-		DepositCents:     depositCents,
-		Authorized:       true,
+		Provider:        "noop",
+		ProviderEventID: "evt_noop_" + rentalID + "_" + time.Now().UTC().Format(time.RFC3339Nano),
+		EventType:       "payment.authorized",
+		RentalID:        rentalID,
+		AmountCents:     amountCents,
+		DepositCents:    depositCents,
+		Authorized:      true,
 	}
 }
 
