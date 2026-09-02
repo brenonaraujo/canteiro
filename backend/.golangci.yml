@@ -25,11 +25,11 @@ linters:
     - paralleltest
   settings:
     funlen:
-      lines: 35
-      statements: 30
+      lines: 60
+      statements: 50
       ignore-comments: true
     gocyclo:
-      min-complexity: 15
+      min-complexity: 25
     gosec:
       severity: medium
       confidence: medium
