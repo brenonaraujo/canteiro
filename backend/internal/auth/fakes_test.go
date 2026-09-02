@@ -172,6 +172,17 @@ func (wired) PublishListing(c *gin.Context, _ openapi_types.UUID) { c.Status(htt
 func (wired) GetOwnerOnboarding(c *gin.Context)                   { c.Status(http.StatusNotFound) }
 func (wired) UpdateOwnerOnboarding(c *gin.Context)                { c.Status(http.StatusNotFound) }
 
+// F3 rental + payment stubs (out of scope for auth tests).
+func (wired) CreateRental(c *gin.Context)                                     { c.Status(http.StatusNotFound) }
+func (wired) ListMyRentals(c *gin.Context)                                    { c.Status(http.StatusNotFound) }
+func (wired) GetRental(c *gin.Context, _ openapi_types.UUID)                 { c.Status(http.StatusNotFound) }
+func (wired) AuthorizeRentalPayment(c *gin.Context, _ openapi_types.UUID)     { c.Status(http.StatusNotFound) }
+func (wired) AcceptRental(c *gin.Context, _ openapi_types.UUID)              { c.Status(http.StatusNotFound) }
+func (wired) DeclineRental(c *gin.Context, _ openapi_types.UUID)             { c.Status(http.StatusNotFound) }
+func (wired) CancelRental(c *gin.Context, _ openapi_types.UUID)             { c.Status(http.StatusNotFound) }
+func (wired) GetRentalReceipt(c *gin.Context, _ openapi_types.UUID)          { c.Status(http.StatusNotFound) }
+func (wired) PaymentWebhook(c *gin.Context, _ api.PaymentWebhookParams)     { c.Status(http.StatusNotFound) }
+
 func do(r http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

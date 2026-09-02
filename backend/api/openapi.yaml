@@ -1,12 +1,14 @@
 openapi: 3.0.3
 info:
   title: Canteiro API
-  version: 0.3.0
+  version: 0.4.0
   description: |
     F1 Conta: identidade Google, perfil mínimo, logout e desativação.
     F2 Catálogo: publicar, busca pública, operador declarado,
     calendário de disponibilidade e ficha pública.
-    Sem reserva, pagamento ou Stripe de produto.
+    F3 Reserva: criar intent, autorizar pagamento (Stripe), webhook,
+    aceitar/recusar pelo proprietário dentro da janela de 12h,
+    recibo imutável do locatário.
   contact:
     name: Canteiro
     url: https://canteiro.brenon.cloud
@@ -26,6 +28,10 @@ tags:
     description: Owner CRUD for listings (F2)
   - name: catalog
     description: Public discovery, calendar and ficha (F2)
+  - name: rentals
+    description: Tenant reservations and receipts (F3)
+  - name: payments
+    description: Payment authorization webhook (F3)
 paths:
   /healthz:
     get:
@@ -674,6 +680,260 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CategoryConfig"
+  /rentals:
+    post:
+      operationId: CreateRental
+      tags: [rentals]
+      summary: Create a reservation intent (tenant)
+      description: |
+        Validates the preconditions (tenant active, listing published,
+        no calendar overlap, operator terms accepted when required), prices
+        the rental and persists a `pending` rental. Idempotent on the
+        (tenant, listing, window) tuple.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRentalRequest"
+      responses:
+        "201":
+          description: Rental created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RentalQuoteOut"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+    get:
+      operationId: ListMyRentals
+      tags: [rentals]
+      summary: List the caller's rentals
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Rentals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rental"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /rentals/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: GetRental
+      tags: [rentals]
+      summary: Get one rental
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Rental
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rental"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /rentals/{id}/authorize:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: AuthorizeRentalPayment
+      tags: [rentals]
+      summary: Authorize payment (tenant)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: PaymentIntent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentIntent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /rentals/{id}/accept:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: AcceptRental
+      tags: [rentals]
+      summary: Accept the rental (owner)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Rental confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rental"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /rentals/{id}/decline:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: DeclineRental
+      tags: [rentals]
+      summary: Decline the rental (owner)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeclineRentalRequest"
+      responses:
+        "200":
+          description: Rental declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rental"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /rentals/{id}/cancel:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: CancelRental
+      tags: [rentals]
+      summary: Cancel the rental pre-acceptance (tenant)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Rental cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rental"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /rentals/{id}/receipt:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: GetRentalReceipt
+      tags: [rentals]
+      summary: Tenant receipt (immutable)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RentalReceipt"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /payments/webhook:
+    post:
+      operationId: PaymentWebhook
+      tags: [payments]
+      summary: PSP webhook (signature verified server-side)
+      parameters:
+        - in: header
+          name: Stripe-Signature
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentWebhookEvent"
+      responses:
+        "200":
+          description: Event accepted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 components:
   securitySchemes:
     cookieAuth:
@@ -1170,7 +1430,342 @@ components:
           type: boolean
         terms_version:
           type: string
+    RentalState:
+      type: string
+      enum: [pending, authorized, confirmed, declined, expired, cancelled, refunded]
+    Rental:
+      type: object
+      required:
+        - id
+        - listing_id
+        - tenant_account_id
+        - state
+        - starts_at
+        - ends_at
+        - with_operator
+        - operator_terms_accepted
+        - intent_key
+        - rent_cents
+        - operator_cents
+        - deposit_cents
+        - commission_cents
+        - owner_payout_cents
+        - operator_payout_cents
+        - listing_snapshot
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        listing_id:
+          type: string
+          format: uuid
+        tenant_account_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/RentalState"
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        with_operator:
+          type: boolean
+        operator_terms_accepted:
+          type: boolean
+        intent_key:
+          type: string
+        rent_cents:
+          type: integer
+          minimum: 0
+        operator_cents:
+          type: integer
+          minimum: 0
+        deposit_cents:
+          type: integer
+          minimum: 0
+        commission_cents:
+          type: integer
+          minimum: 0
+        owner_payout_cents:
+          type: integer
+          minimum: 0
+        operator_payout_cents:
+          type: integer
+          minimum: 0
+        listing_snapshot:
+          $ref: "#/components/schemas/ListingSnapshot"
+        acceptance_deadline_at:
+          type: string
+          format: date-time
+        confirmed_at:
+          type: string
+          format: date-time
+        declined_at:
+          type: string
+          format: date-time
+        decline_reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ListingSnapshot:
+      type: object
+      required: [owner_id, title, category, price_unit, price_amount_cents, deposit_cents, operator]
+      properties:
+        owner_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        category:
+          $ref: "#/components/schemas/ListingCategory"
+        price_unit:
+          $ref: "#/components/schemas/PriceUnit"
+        price_amount_cents:
+          type: integer
+          minimum: 0
+        deposit_cents:
+          type: integer
+          minimum: 0
+        min_lead_time_hours:
+          type: integer
+          minimum: 0
+        pickup_city:
+          type: string
+        operator:
+          $ref: "#/components/schemas/SnapshotOperator"
+    SnapshotOperator:
+      type: object
+      required: [mode, hourly_rate_cents, min_hours, is_owner]
+      properties:
+        mode:
+          $ref: "#/components/schemas/OperatorMode"
+        hourly_rate_cents:
+          type: integer
+          minimum: 0
+        min_hours:
+          type: integer
+          minimum: 0
+        name:
+          type: string
+        phone:
+          type: string
+        is_owner:
+          type: boolean
+    CreateRentalRequest:
+      type: object
+      required: [listing_id, starts_at, ends_at, with_operator, operator_terms_accepted]
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        with_operator:
+          type: boolean
+        operator_terms_accepted:
+          type: boolean
+    RentalQuoteOut:
+      type: object
+      required:
+        - rental_id
+        - rent_cents
+        - operator_cents
+        - deposit_cents
+        - total_cents
+        - commission_base_cents
+        - commission_cents
+        - owner_payout_cents
+        - operator_payout_cents
+      properties:
+        rental_id:
+          type: string
+          format: uuid
+        rent_cents:
+          type: integer
+          minimum: 0
+        operator_cents:
+          type: integer
+          minimum: 0
+        deposit_cents:
+          type: integer
+          minimum: 0
+        total_cents:
+          type: integer
+          minimum: 0
+        commission_base_cents:
+          type: integer
+          minimum: 0
+        commission_cents:
+          type: integer
+          minimum: 0
+        owner_payout_cents:
+          type: integer
+          minimum: 0
+        operator_payout_cents:
+          type: integer
+          minimum: 0
+    DeclineRentalRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [outside_schedule, item_unavailable, terms_mismatch, other]
+    RentalReceipt:
+      type: object
+      required:
+        - rental_id
+        - tenant_account_id
+        - rent_cents
+        - operator_cents
+        - deposit_cents
+        - total_cents
+        - commission_base_cents
+        - commission_cents
+        - owner_payout_cents
+        - operator_payout_cents
+        - listing_snapshot
+        - window_starts_at
+        - window_ends_at
+        - issued_at
+      properties:
+        rental_id:
+          type: string
+          format: uuid
+        tenant_account_id:
+          type: string
+          format: uuid
+        rent_cents:
+          type: integer
+        operator_cents:
+          type: integer
+        deposit_cents:
+          type: integer
+        total_cents:
+          type: integer
+        commission_base_cents:
+          type: integer
+        commission_cents:
+          type: integer
+        owner_payout_cents:
+          type: integer
+        operator_payout_cents:
+          type: integer
+        listing_snapshot:
+          $ref: "#/components/schemas/ListingSnapshot"
+        window_starts_at:
+          type: string
+          format: date-time
+        window_ends_at:
+          type: string
+          format: date-time
+        issued_at:
+          type: string
+          format: date-time
+    PaymentIntent:
+      type: object
+      required:
+        - id
+        - rental_id
+        - provider
+        - idempotency_key
+        - attempt
+        - amount_cents
+        - deposit_cents
+        - expected_total_cents
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        rental_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [stripe, noop]
+        provider_payment_id:
+          type: string
+        idempotency_key:
+          type: string
+        attempt:
+          type: integer
+          minimum: 1
+        amount_cents:
+          type: integer
+          minimum: 0
+        deposit_cents:
+          type: integer
+          minimum: 0
+        expected_total_cents:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: [requires_action, authorized, failed, refunded]
+        failure_code:
+          type: string
+        failure_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PaymentWebhookEvent:
+      type: object
+      required: [id, type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [payment.authorized, payment.failed, payment.refunded]
+        data:
+          type: object
+          required: [rental_id, amount_cents]
+          properties:
+            rental_id:
+              type: string
+              format: uuid
+            payment_intent_id:
+              type: string
+              format: uuid
+            amount_cents:
+              type: integer
+              minimum: 0
+            deposit_cents:
+              type: integer
+              minimum: 0
+            failure_code:
+              type: string
+            failure_message:
+              type: string
   responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Conflict with current resource state
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Unauthorized:
       description: Missing or unknown session
       content:

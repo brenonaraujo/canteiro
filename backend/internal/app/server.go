@@ -18,6 +18,8 @@ type ServerOpts struct { //nolint:govet // fieldalignment vs readable wiring
 	Checkers    []repository.Checker
 	Auth        *auth.API
 	Listing     *handler.ListingAPI
+	Rental      *handler.RentalAPI
+	Payment     *handler.PaymentAPI
 	ServiceName string
 	MetricsPath string
 	GinMode     string
@@ -28,6 +30,8 @@ type apiMux struct {
 	*handler.Server
 	*auth.API
 	*handler.ListingAPI
+	*handler.RentalAPI
+	*handler.PaymentAPI
 }
 
 // NewRouter builds recovery, CORS, metrics, locale, health, auth and metrics scrape.
@@ -42,6 +46,8 @@ func NewRouter(opts ServerOpts) *gin.Engine {
 		Server:     handler.NewServer(serviceName(opts.ServiceName), opts.Checkers),
 		API:        acc,
 		ListingAPI: opts.Listing,
+		RentalAPI:  opts.Rental,
+		PaymentAPI: opts.Payment,
 	})
 	r.GET(metricsPath(opts.MetricsPath), gin.WrapH(promhttp.Handler()))
 	return r

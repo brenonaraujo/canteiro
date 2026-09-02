@@ -41,6 +41,30 @@ func (e AccountStatus) Valid() bool {
 	}
 }
 
+// Defines values for DeclineRentalRequestReason.
+const (
+	ItemUnavailable DeclineRentalRequestReason = "item_unavailable"
+	Other           DeclineRentalRequestReason = "other"
+	OutsideSchedule DeclineRentalRequestReason = "outside_schedule"
+	TermsMismatch   DeclineRentalRequestReason = "terms_mismatch"
+)
+
+// Valid indicates whether the value is a known member of the DeclineRentalRequestReason enum.
+func (e DeclineRentalRequestReason) Valid() bool {
+	switch e {
+	case ItemUnavailable:
+		return true
+	case Other:
+		return true
+	case OutsideSchedule:
+		return true
+	case TermsMismatch:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListingCategory.
 const (
 	ListingCategoryAgricultural      ListingCategory = "agricultural"
@@ -128,6 +152,69 @@ func (e OperatorMode) Valid() bool {
 	}
 }
 
+// Defines values for PaymentIntentProvider.
+const (
+	Noop   PaymentIntentProvider = "noop"
+	Stripe PaymentIntentProvider = "stripe"
+)
+
+// Valid indicates whether the value is a known member of the PaymentIntentProvider enum.
+func (e PaymentIntentProvider) Valid() bool {
+	switch e {
+	case Noop:
+		return true
+	case Stripe:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PaymentIntentStatus.
+const (
+	PaymentIntentStatusAuthorized     PaymentIntentStatus = "authorized"
+	PaymentIntentStatusFailed         PaymentIntentStatus = "failed"
+	PaymentIntentStatusRefunded       PaymentIntentStatus = "refunded"
+	PaymentIntentStatusRequiresAction PaymentIntentStatus = "requires_action"
+)
+
+// Valid indicates whether the value is a known member of the PaymentIntentStatus enum.
+func (e PaymentIntentStatus) Valid() bool {
+	switch e {
+	case PaymentIntentStatusAuthorized:
+		return true
+	case PaymentIntentStatusFailed:
+		return true
+	case PaymentIntentStatusRefunded:
+		return true
+	case PaymentIntentStatusRequiresAction:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PaymentWebhookEventType.
+const (
+	PaymentAuthorized PaymentWebhookEventType = "payment.authorized"
+	PaymentFailed     PaymentWebhookEventType = "payment.failed"
+	PaymentRefunded   PaymentWebhookEventType = "payment.refunded"
+)
+
+// Valid indicates whether the value is a known member of the PaymentWebhookEventType enum.
+func (e PaymentWebhookEventType) Valid() bool {
+	switch e {
+	case PaymentAuthorized:
+		return true
+	case PaymentFailed:
+		return true
+	case PaymentRefunded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PriceUnit.
 const (
 	Day  PriceUnit = "day"
@@ -158,6 +245,39 @@ func (e ReadyResponseStatus) Valid() bool {
 	case NotReady:
 		return true
 	case Ready:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RentalState.
+const (
+	RentalStateAuthorized RentalState = "authorized"
+	RentalStateCancelled  RentalState = "cancelled"
+	RentalStateConfirmed  RentalState = "confirmed"
+	RentalStateDeclined   RentalState = "declined"
+	RentalStateExpired    RentalState = "expired"
+	RentalStatePending    RentalState = "pending"
+	RentalStateRefunded   RentalState = "refunded"
+)
+
+// Valid indicates whether the value is a known member of the RentalState enum.
+func (e RentalState) Valid() bool {
+	switch e {
+	case RentalStateAuthorized:
+		return true
+	case RentalStateCancelled:
+		return true
+	case RentalStateConfirmed:
+		return true
+	case RentalStateDeclined:
+		return true
+	case RentalStateExpired:
+		return true
+	case RentalStatePending:
+		return true
+	case RentalStateRefunded:
 		return true
 	default:
 		return false
@@ -231,11 +351,28 @@ type CreateListingRequest struct {
 	Title              string           `json:"title"`
 }
 
+// CreateRentalRequest defines model for CreateRentalRequest.
+type CreateRentalRequest struct {
+	EndsAt                time.Time          `json:"ends_at"`
+	ListingId             openapi_types.UUID `json:"listing_id"`
+	OperatorTermsAccepted bool               `json:"operator_terms_accepted"`
+	StartsAt              time.Time          `json:"starts_at"`
+	WithOperator          bool               `json:"with_operator"`
+}
+
 // DeactivateAccountRequest defines model for DeactivateAccountRequest.
 type DeactivateAccountRequest struct {
 	// Confirm Example: true
 	Confirm bool `json:"confirm"`
 }
+
+// DeclineRentalRequest defines model for DeclineRentalRequest.
+type DeclineRentalRequest struct {
+	Reason *DeclineRentalRequestReason `json:"reason,omitempty"`
+}
+
+// DeclineRentalRequestReason defines model for DeclineRentalRequest.Reason.
+type DeclineRentalRequestReason string
 
 // Error defines model for Error.
 type Error struct {
@@ -321,6 +458,19 @@ type ListingRules struct {
 // ListingSize defines model for ListingSize.
 type ListingSize string
 
+// ListingSnapshot defines model for ListingSnapshot.
+type ListingSnapshot struct {
+	Category         ListingCategory    `json:"category"`
+	DepositCents     int                `json:"deposit_cents"`
+	MinLeadTimeHours *int               `json:"min_lead_time_hours,omitempty"`
+	Operator         SnapshotOperator   `json:"operator"`
+	OwnerId          openapi_types.UUID `json:"owner_id"`
+	PickupCity       *string            `json:"pickup_city,omitempty"`
+	PriceAmountCents int                `json:"price_amount_cents"`
+	PriceUnit        PriceUnit          `json:"price_unit"`
+	Title            string             `json:"title"`
+}
+
 // ListingState defines model for ListingState.
 type ListingState string
 
@@ -345,6 +495,47 @@ type OwnerOnboarding struct {
 	TermsAcceptedAt *time.Time `json:"terms_accepted_at,omitempty"`
 	TermsVersion    string     `json:"terms_version"`
 }
+
+// PaymentIntent defines model for PaymentIntent.
+type PaymentIntent struct {
+	AmountCents        int                   `json:"amount_cents"`
+	Attempt            int                   `json:"attempt"`
+	CreatedAt          *time.Time            `json:"created_at,omitempty"`
+	DepositCents       int                   `json:"deposit_cents"`
+	ExpectedTotalCents int                   `json:"expected_total_cents"`
+	FailureCode        *string               `json:"failure_code,omitempty"`
+	FailureMessage     *string               `json:"failure_message,omitempty"`
+	Id                 openapi_types.UUID    `json:"id"`
+	IdempotencyKey     string                `json:"idempotency_key"`
+	Provider           PaymentIntentProvider `json:"provider"`
+	ProviderPaymentId  *string               `json:"provider_payment_id,omitempty"`
+	RentalId           openapi_types.UUID    `json:"rental_id"`
+	Status             PaymentIntentStatus   `json:"status"`
+	UpdatedAt          *time.Time            `json:"updated_at,omitempty"`
+}
+
+// PaymentIntentProvider defines model for PaymentIntent.Provider.
+type PaymentIntentProvider string
+
+// PaymentIntentStatus defines model for PaymentIntent.Status.
+type PaymentIntentStatus string
+
+// PaymentWebhookEvent defines model for PaymentWebhookEvent.
+type PaymentWebhookEvent struct {
+	Data struct {
+		AmountCents     int                 `json:"amount_cents"`
+		DepositCents    *int                `json:"deposit_cents,omitempty"`
+		FailureCode     *string             `json:"failure_code,omitempty"`
+		FailureMessage  *string             `json:"failure_message,omitempty"`
+		PaymentIntentId *openapi_types.UUID `json:"payment_intent_id,omitempty"`
+		RentalId        openapi_types.UUID  `json:"rental_id"`
+	} `json:"data"`
+	Id   string                  `json:"id"`
+	Type PaymentWebhookEventType `json:"type"`
+}
+
+// PaymentWebhookEventType defines model for PaymentWebhookEvent.Type.
+type PaymentWebhookEventType string
 
 // PriceUnit defines model for PriceUnit.
 type PriceUnit string
@@ -398,6 +589,76 @@ type ReadyResponse struct {
 // ReadyResponseStatus defines model for ReadyResponse.Status.
 type ReadyResponseStatus string
 
+// Rental defines model for Rental.
+type Rental struct {
+	AcceptanceDeadlineAt  *time.Time         `json:"acceptance_deadline_at,omitempty"`
+	CommissionCents       int                `json:"commission_cents"`
+	ConfirmedAt           *time.Time         `json:"confirmed_at,omitempty"`
+	CreatedAt             time.Time          `json:"created_at"`
+	DeclineReason         *string            `json:"decline_reason,omitempty"`
+	DeclinedAt            *time.Time         `json:"declined_at,omitempty"`
+	DepositCents          int                `json:"deposit_cents"`
+	EndsAt                time.Time          `json:"ends_at"`
+	Id                    openapi_types.UUID `json:"id"`
+	IntentKey             string             `json:"intent_key"`
+	ListingId             openapi_types.UUID `json:"listing_id"`
+	ListingSnapshot       ListingSnapshot    `json:"listing_snapshot"`
+	OperatorCents         int                `json:"operator_cents"`
+	OperatorPayoutCents   int                `json:"operator_payout_cents"`
+	OperatorTermsAccepted bool               `json:"operator_terms_accepted"`
+	OwnerPayoutCents      int                `json:"owner_payout_cents"`
+	RentCents             int                `json:"rent_cents"`
+	StartsAt              time.Time          `json:"starts_at"`
+	State                 RentalState        `json:"state"`
+	TenantAccountId       openapi_types.UUID `json:"tenant_account_id"`
+	UpdatedAt             time.Time          `json:"updated_at"`
+	WithOperator          bool               `json:"with_operator"`
+}
+
+// RentalQuoteOut defines model for RentalQuoteOut.
+type RentalQuoteOut struct {
+	CommissionBaseCents int                `json:"commission_base_cents"`
+	CommissionCents     int                `json:"commission_cents"`
+	DepositCents        int                `json:"deposit_cents"`
+	OperatorCents       int                `json:"operator_cents"`
+	OperatorPayoutCents int                `json:"operator_payout_cents"`
+	OwnerPayoutCents    int                `json:"owner_payout_cents"`
+	RentCents           int                `json:"rent_cents"`
+	RentalId            openapi_types.UUID `json:"rental_id"`
+	TotalCents          int                `json:"total_cents"`
+}
+
+// RentalReceipt defines model for RentalReceipt.
+type RentalReceipt struct {
+	CommissionBaseCents int                `json:"commission_base_cents"`
+	CommissionCents     int                `json:"commission_cents"`
+	DepositCents        int                `json:"deposit_cents"`
+	IssuedAt            time.Time          `json:"issued_at"`
+	ListingSnapshot     ListingSnapshot    `json:"listing_snapshot"`
+	OperatorCents       int                `json:"operator_cents"`
+	OperatorPayoutCents int                `json:"operator_payout_cents"`
+	OwnerPayoutCents    int                `json:"owner_payout_cents"`
+	RentCents           int                `json:"rent_cents"`
+	RentalId            openapi_types.UUID `json:"rental_id"`
+	TenantAccountId     openapi_types.UUID `json:"tenant_account_id"`
+	TotalCents          int                `json:"total_cents"`
+	WindowEndsAt        time.Time          `json:"window_ends_at"`
+	WindowStartsAt      time.Time          `json:"window_starts_at"`
+}
+
+// RentalState defines model for RentalState.
+type RentalState string
+
+// SnapshotOperator defines model for SnapshotOperator.
+type SnapshotOperator struct {
+	HourlyRateCents int          `json:"hourly_rate_cents"`
+	IsOwner         bool         `json:"is_owner"`
+	MinHours        int          `json:"min_hours"`
+	Mode            OperatorMode `json:"mode"`
+	Name            *string      `json:"name,omitempty"`
+	Phone           *string      `json:"phone,omitempty"`
+}
+
 // UpdateAccountRequest defines model for UpdateAccountRequest.
 type UpdateAccountRequest struct {
 	// DisplayName Example: Ana
@@ -433,6 +694,12 @@ type UpdateOwnerOnboardingRequest struct {
 	TermsVersion *string `json:"terms_version,omitempty"`
 }
 
+// BadRequest defines model for BadRequest.
+type BadRequest = Error
+
+// Conflict defines model for Conflict.
+type Conflict = Error
+
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
 
@@ -464,6 +731,11 @@ type GetPublicCalendarParams struct {
 	To   *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// PaymentWebhookParams defines parameters for PaymentWebhook.
+type PaymentWebhookParams struct {
+	StripeSignature *string `json:"Stripe-Signature,omitempty"`
+}
+
 // UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
 type UpdateAccountJSONRequestBody = UpdateAccountRequest
 
@@ -481,6 +753,15 @@ type AddBlockJSONRequestBody = AddBlockRequest
 
 // UpdateOwnerOnboardingJSONRequestBody defines body for UpdateOwnerOnboarding for application/json ContentType.
 type UpdateOwnerOnboardingJSONRequestBody = UpdateOwnerOnboardingRequest
+
+// PaymentWebhookJSONRequestBody defines body for PaymentWebhook for application/json ContentType.
+type PaymentWebhookJSONRequestBody = PaymentWebhookEvent
+
+// CreateRentalJSONRequestBody defines body for CreateRental for application/json ContentType.
+type CreateRentalJSONRequestBody = CreateRentalRequest
+
+// DeclineRentalJSONRequestBody defines body for DeclineRental for application/json ContentType.
+type DeclineRentalJSONRequestBody = DeclineRentalRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -550,9 +831,36 @@ type ServerInterface interface {
 	// UpdateOwnerOnboarding Update payout details and/or accept terms
 	// (PATCH /owner/onboarding)
 	UpdateOwnerOnboarding(c *gin.Context)
+	// PaymentWebhook PSP webhook (signature verified server-side)
+	// (POST /payments/webhook)
+	PaymentWebhook(c *gin.Context, params PaymentWebhookParams)
 	// Readyz Readiness probe
 	// (GET /readyz)
 	Readyz(c *gin.Context)
+	// ListMyRentals List the caller's rentals
+	// (GET /rentals)
+	ListMyRentals(c *gin.Context)
+	// CreateRental Create a reservation intent (tenant)
+	// (POST /rentals)
+	CreateRental(c *gin.Context)
+	// GetRental Get one rental
+	// (GET /rentals/{id})
+	GetRental(c *gin.Context, id openapi_types.UUID)
+	// AcceptRental Accept the rental (owner)
+	// (POST /rentals/{id}/accept)
+	AcceptRental(c *gin.Context, id openapi_types.UUID)
+	// AuthorizeRentalPayment Authorize payment (tenant)
+	// (POST /rentals/{id}/authorize)
+	AuthorizeRentalPayment(c *gin.Context, id openapi_types.UUID)
+	// CancelRental Cancel the rental pre-acceptance (tenant)
+	// (POST /rentals/{id}/cancel)
+	CancelRental(c *gin.Context, id openapi_types.UUID)
+	// DeclineRental Decline the rental (owner)
+	// (POST /rentals/{id}/decline)
+	DeclineRental(c *gin.Context, id openapi_types.UUID)
+	// GetRentalReceipt Tenant receipt (immutable)
+	// (GET /rentals/{id}/receipt)
+	GetRentalReceipt(c *gin.Context, id openapi_types.UUID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1064,6 +1372,46 @@ func (siw *ServerInterfaceWrapper) UpdateOwnerOnboarding(c *gin.Context) {
 	siw.Handler.UpdateOwnerOnboarding(c)
 }
 
+// PaymentWebhook operation middleware
+func (siw *ServerInterfaceWrapper) PaymentWebhook(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PaymentWebhookParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Stripe-Signature" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Stripe-Signature")]; found {
+		var StripeSignature string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Stripe-Signature, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Stripe-Signature", valueList[0], &StripeSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Stripe-Signature: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.StripeSignature = &StripeSignature
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PaymentWebhook(c, params)
+}
+
 // Readyz operation middleware
 func (siw *ServerInterfaceWrapper) Readyz(c *gin.Context) {
 
@@ -1075,6 +1423,182 @@ func (siw *ServerInterfaceWrapper) Readyz(c *gin.Context) {
 	}
 
 	siw.Handler.Readyz(c)
+}
+
+// ListMyRentals operation middleware
+func (siw *ServerInterfaceWrapper) ListMyRentals(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListMyRentals(c)
+}
+
+// CreateRental operation middleware
+func (siw *ServerInterfaceWrapper) CreateRental(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateRental(c)
+}
+
+// GetRental operation middleware
+func (siw *ServerInterfaceWrapper) GetRental(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRental(c, id)
+}
+
+// AcceptRental operation middleware
+func (siw *ServerInterfaceWrapper) AcceptRental(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptRental(c, id)
+}
+
+// AuthorizeRentalPayment operation middleware
+func (siw *ServerInterfaceWrapper) AuthorizeRentalPayment(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AuthorizeRentalPayment(c, id)
+}
+
+// CancelRental operation middleware
+func (siw *ServerInterfaceWrapper) CancelRental(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CancelRental(c, id)
+}
+
+// DeclineRental operation middleware
+func (siw *ServerInterfaceWrapper) DeclineRental(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeclineRental(c, id)
+}
+
+// GetRentalReceipt operation middleware
+func (siw *ServerInterfaceWrapper) GetRentalReceipt(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRentalReceipt(c, id)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -1127,6 +1651,15 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/catalog/listings/:id", wrapper.GetPublicListing)
 	router.GET(options.BaseURL+"/catalog/listings/:id/calendar", wrapper.GetPublicCalendar)
 	router.GET(options.BaseURL+"/catalog/categories", wrapper.ListCategories)
+	router.GET(options.BaseURL+"/rentals", wrapper.ListMyRentals)
+	router.POST(options.BaseURL+"/rentals", wrapper.CreateRental)
+	router.GET(options.BaseURL+"/rentals/:id", wrapper.GetRental)
+	router.POST(options.BaseURL+"/rentals/:id/authorize", wrapper.AuthorizeRentalPayment)
+	router.POST(options.BaseURL+"/rentals/:id/accept", wrapper.AcceptRental)
+	router.POST(options.BaseURL+"/rentals/:id/decline", wrapper.DeclineRental)
+	router.POST(options.BaseURL+"/rentals/:id/cancel", wrapper.CancelRental)
+	router.GET(options.BaseURL+"/rentals/:id/receipt", wrapper.GetRentalReceipt)
+	router.POST(options.BaseURL+"/payments/webhook", wrapper.PaymentWebhook)
 }
 
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
@@ -1134,92 +1667,115 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"Pb/7dPd/AQAA//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
