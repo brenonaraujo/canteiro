@@ -23,7 +23,7 @@ watch(() => props.modelValue, (next) => {
 })
 
 const categoryOptions = computed(() => [
-  { label: t('listing.filters.any'), value: '' },
+  { label: t('listing.filters.any'), value: null as string | null },
   { label: t('listing.category.manual'), value: 'manual' },
   { label: t('listing.category.electric'), value: 'electric' },
   { label: t('listing.category.light_construction'), value: 'light_construction' },
@@ -32,13 +32,13 @@ const categoryOptions = computed(() => [
 ])
 
 const sizeOptions = computed(() => [
-  { label: t('listing.filters.any'), value: '' },
+  { label: t('listing.filters.any'), value: null as string | null },
   { label: t('listing.size.light'), value: 'light' },
   { label: t('listing.size.heavy'), value: 'heavy' }
 ])
 
 const operatorOptions = computed(() => [
-  { label: t('listing.filters.any'), value: '' },
+  { label: t('listing.filters.any'), value: null as string | null },
   { label: t('listing.operator_mode.none'), value: 'none' },
   { label: t('listing.operator_mode.optional'), value: 'optional' },
   { label: t('listing.operator_mode.required'), value: 'required' }
@@ -54,12 +54,12 @@ function onApply() {
 }
 
 function onClear() {
-  local.category = undefined
-  local.size = undefined
+  local.category = null
+  local.size = null
   local.city = undefined
   local.from = undefined
   local.to = undefined
-  local.operator_mode = undefined
+  local.operator_mode = null
   local.min_price_cents = undefined
   local.max_price_cents = undefined
   emitUpdate()

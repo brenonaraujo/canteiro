@@ -231,7 +231,7 @@ function toCalendarQuery(range: { from?: string, to?: string } = {}): string {
 function appendIfPresent(
   params: URLSearchParams,
   key: string,
-  value: string | number | undefined
+  value: string | number | null | undefined
 ): void {
   if (value === undefined || value === null || value === '') {
     return

@@ -140,12 +140,12 @@ export type CreateListingInput = {
 export type UpdateListingInput = Partial<CreateListingInput>
 
 export type ListingSearchFilters = {
-  category?: ListingCategory
+  category?: ListingCategory | null
   city?: string
   from?: string
   to?: string
-  operator_mode?: OperatorMode
-  size?: ListingSize
+  operator_mode?: OperatorMode | null
+  size?: ListingSize | null
   min_price_cents?: number
   max_price_cents?: number
   page?: number
