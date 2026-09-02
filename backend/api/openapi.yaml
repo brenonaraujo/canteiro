@@ -1,10 +1,12 @@
 openapi: 3.0.3
 info:
   title: Canteiro API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     F1 Conta: identidade Google, perfil mínimo, logout e desativação.
-    Sem catálogo, reserva, pagamento ou Stripe de produto.
+    F2 Catálogo: publicar, busca pública, operador declarado,
+    calendário de disponibilidade e ficha pública.
+    Sem reserva, pagamento ou Stripe de produto.
   contact:
     name: Canteiro
     url: https://canteiro.brenon.cloud
@@ -20,6 +22,10 @@ tags:
     description: Google identity and session
   - name: account
     description: Profile and deactivation
+  - name: listings
+    description: Owner CRUD for listings (F2)
+  - name: catalog
+    description: Public discovery, calendar and ficha (F2)
 paths:
   /healthz:
     get:
@@ -188,6 +194,486 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "422":
           $ref: "#/components/responses/Unprocessable"
+  /listings:
+    get:
+      operationId: ListMineListings
+      tags: [listings]
+      summary: List the caller's listings
+      description: |
+        Returns every listing owned by the authenticated account,
+        regardless of state. Used for the owner dashboard.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Listings owned by the caller
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: CreateListingDraft
+      tags: [listings]
+      summary: Create a draft listing
+      description: |
+        Creates a listing in `draft`. Drafts are not visible in public
+        search. The owner must satisfy publish gates (photo, deposit
+        minimum, cession declaration when heavy, operator identification
+        when operator is required, valid delivery coverage when delivery
+        is declared, payout details and owner terms) before the listing
+        can move to `published`. Deactivated accounts cannot create
+        listings; accounts without visible name and phone can persist a
+        draft but cannot publish it.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateListingRequest"
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /listings/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: GetMyListing
+      tags: [listings]
+      summary: Get one of the caller's listings (private)
+      description: |
+        Returns the listing with full owner data including operator
+        identity and contact (only used by the owner).
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: UpdateListing
+      tags: [listings]
+      summary: Update a draft or paused listing
+      description: |
+        Updates listing fields while in `draft` or `paused`. A published
+        listing cannot be edited through this endpoint; the owner must
+        pause it first, edit it, then publish again.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateListingRequest"
+      responses:
+        "200":
+          description: Updated listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Listing is published; pause it before editing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /listings/{id}/publish:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: PublishListing
+      tags: [listings]
+      summary: Publish (or unpause) a listing
+      description: |
+        Moves a draft or paused listing into `published`. All publish
+        gates are evaluated server-side. A listing that fails any gate
+        stays in its current state and returns 422 with the missing field
+        codes. Pausing is reversible by calling this endpoint again.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Listing published (or unpaused)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /listings/{id}/pause:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: PauseListing
+      tags: [listings]
+      summary: Pause a published listing
+      description: |
+        Pauses a published listing. It is removed from public search
+        but data is preserved. It is not deleted.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Listing paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Listing is not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /listings/{id}/blocks:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: ListBlocks
+      tags: [listings]
+      summary: Owner view of availability blocks
+      description: |
+        Returns every availability block created by the owner. Used by
+        the owner dashboard to manage the calendar.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Blocks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityBlock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: AddBlock
+      tags: [listings]
+      summary: Add an availability block
+      description: |
+        Adds a block to the listing calendar. Blocks must not overlap
+        (the calendar is the single source of availability; F3 will
+        honour this invariant on reservation).
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddBlockRequest"
+      responses:
+        "201":
+          description: Block created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityBlock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Block overlaps an existing block
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /listings/{id}/blocks/{blockId}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: blockId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: RemoveBlock
+      tags: [listings]
+      summary: Remove an availability block
+      description: |
+        Removes a block created by the owner. Past blocks are kept
+        for the audit log.
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: Block removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /owner/onboarding:
+    get:
+      operationId: GetOwnerOnboarding
+      tags: [listings]
+      summary: Owner onboarding state
+      description: |
+        Returns whether the owner has set payout details and accepted
+        the owner terms. Both must be true before the owner can publish
+        a listing.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Owner onboarding state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerOnboarding"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      operationId: UpdateOwnerOnboarding
+      tags: [listings]
+      summary: Update payout details and/or accept terms
+      description: |
+        Updates owner-side onboarding data. Setting `accept_terms=true`
+        records the acceptance timestamp and locks the published owner
+        terms version. Payout details are stored as opaque strings in
+        v1 (the actual Stripe Connect integration lands in F3).
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOwnerOnboardingRequest"
+      responses:
+        "200":
+          description: Owner onboarding updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerOnboarding"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /catalog/listings:
+    get:
+      operationId: SearchCatalog
+      tags: [catalog]
+      summary: Public search (no login required)
+      description: |
+        Search published listings. Supports filters by category, city,
+        date interval (returning listings not blocked across the entire
+        interval), operator mode, price range and size (light or heavy).
+        Pages are 1-indexed with a fixed page size.
+      parameters:
+        - in: query
+          name: category
+          schema:
+            $ref: "#/components/schemas/ListingCategory"
+        - in: query
+          name: city
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: operator_mode
+          schema:
+            $ref: "#/components/schemas/OperatorMode"
+        - in: query
+          name: size
+          schema:
+            $ref: "#/components/schemas/ListingSize"
+        - in: query
+          name: min_price_cents
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: max_price_cents
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        "200":
+          description: Page of public listings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingPage"
+  /catalog/listings/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: GetPublicListing
+      tags: [catalog]
+      summary: Public ficha (no login required)
+      description: |
+        Returns the public ficha for a published listing. Strips owner
+        identity and operator identity/contact; only the public contact
+        field (pix key, phone) declared on the publication is hidden
+        until F3.
+      responses:
+        "200":
+          description: Public ficha
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicListing"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /catalog/listings/{id}/calendar:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: GetPublicCalendar
+      tags: [catalog]
+      summary: Public calendar (no login required)
+      description: |
+        Returns the list of date intervals the listing is unavailable,
+        plus the minimum reservation lead time in hours. Does not reveal
+        who reserved any interval.
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Public calendar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicCalendar"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /catalog/categories:
+    get:
+      operationId: ListCategories
+      tags: [catalog]
+      summary: Listing categories (config)
+      description: |
+        Returns the catalog of categories, including the deposit minimum
+        per category (cents) required for publication.
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryConfig"
 components:
   securitySchemes:
     cookieAuth:
@@ -282,9 +768,418 @@ components:
         confirm:
           type: boolean
           example: true
+    ListingCategory:
+      type: string
+      enum: [manual, electric, light_construction, agricultural, heavy]
+    ListingSize:
+      type: string
+      enum: [light, heavy]
+    OperatorMode:
+      type: string
+      enum: [none, optional, required]
+    PriceUnit:
+      type: string
+      enum: [hour, day]
+    ListingState:
+      type: string
+      enum: [draft, published, paused]
+    OperatorIdentity:
+      type: object
+      required: [name, phone, is_owner]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        is_owner:
+          type: boolean
+          description: True when the operator is the listing owner.
+    ListingRules:
+      type: object
+      required: []
+      properties:
+        document_required:
+          type: boolean
+        min_age:
+          type: integer
+          minimum: 0
+          maximum: 130
+        experience_required:
+          type: boolean
+        travel_restricted:
+          type: boolean
+    ListingDelivery:
+      type: object
+      required: [enabled, coverage]
+      properties:
+        enabled:
+          type: boolean
+        coverage:
+          type: string
+          description: Free-text delivery area; non-empty when enabled.
+    ListingOperator:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          $ref: "#/components/schemas/OperatorMode"
+        hourly_rate_cents:
+          type: integer
+          minimum: 0
+        min_hours:
+          type: integer
+          minimum: 1
+        identity:
+          $ref: "#/components/schemas/OperatorIdentity"
+    Listing:
+      type: object
+      required:
+        - id
+        - owner_account_id
+        - state
+        - title
+        - description
+        - category
+        - pickup_city
+        - pickup_neighborhood
+        - delivery
+        - price_unit
+        - price_amount_cents
+        - deposit_cents
+        - min_lead_time_hours
+        - photos
+        - rules
+        - operator
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_account_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ListingState"
+        title:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 4000
+        category:
+          $ref: "#/components/schemas/ListingCategory"
+        size:
+          $ref: "#/components/schemas/ListingSize"
+        pickup_city:
+          type: string
+          maxLength: 80
+        pickup_neighborhood:
+          type: string
+          maxLength: 80
+        delivery:
+          $ref: "#/components/schemas/ListingDelivery"
+        price_unit:
+          $ref: "#/components/schemas/PriceUnit"
+        price_amount_cents:
+          type: integer
+          minimum: 0
+        deposit_cents:
+          type: integer
+          minimum: 0
+        min_lead_time_hours:
+          type: integer
+          minimum: 0
+        photos:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            description: Image URL or stored object key.
+        rules:
+          $ref: "#/components/schemas/ListingRules"
+        operator:
+          $ref: "#/components/schemas/ListingOperator"
+        heavy_legal_cession:
+          type: boolean
+          description: Required true for `heavy` category when published.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateListingRequest:
+      type: object
+      required:
+        - title
+        - description
+        - category
+        - pickup_city
+        - pickup_neighborhood
+        - price_unit
+        - price_amount_cents
+        - deposit_cents
+        - min_lead_time_hours
+        - operator
+      properties:
+        title:
+          type: string
+          minLength: 4
+          maxLength: 120
+        description:
+          type: string
+          minLength: 12
+          maxLength: 4000
+        category:
+          $ref: "#/components/schemas/ListingCategory"
+        pickup_city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        pickup_neighborhood:
+          type: string
+          maxLength: 80
+        delivery:
+          $ref: "#/components/schemas/ListingDelivery"
+        price_unit:
+          $ref: "#/components/schemas/PriceUnit"
+        price_amount_cents:
+          type: integer
+          minimum: 1
+        deposit_cents:
+          type: integer
+          minimum: 0
+        min_lead_time_hours:
+          type: integer
+          minimum: 0
+        photos:
+          type: array
+          items:
+            type: string
+        rules:
+          $ref: "#/components/schemas/ListingRules"
+        operator:
+          $ref: "#/components/schemas/ListingOperator"
+        heavy_legal_cession:
+          type: boolean
+    UpdateListingRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 4
+          maxLength: 120
+        description:
+          type: string
+          minLength: 12
+          maxLength: 4000
+        category:
+          $ref: "#/components/schemas/ListingCategory"
+        pickup_city:
+          type: string
+          maxLength: 80
+        pickup_neighborhood:
+          type: string
+          maxLength: 80
+        delivery:
+          $ref: "#/components/schemas/ListingDelivery"
+        price_unit:
+          $ref: "#/components/schemas/PriceUnit"
+        price_amount_cents:
+          type: integer
+          minimum: 1
+        deposit_cents:
+          type: integer
+          minimum: 0
+        min_lead_time_hours:
+          type: integer
+          minimum: 0
+        photos:
+          type: array
+          items:
+            type: string
+        rules:
+          $ref: "#/components/schemas/ListingRules"
+        operator:
+          $ref: "#/components/schemas/ListingOperator"
+        heavy_legal_cession:
+          type: boolean
+    PublicListing:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - category
+        - size
+        - pickup_city
+        - pickup_neighborhood
+        - delivery
+        - price_unit
+        - price_amount_cents
+        - deposit_cents
+        - min_lead_time_hours
+        - photos
+        - rules
+        - operator
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: "#/components/schemas/ListingCategory"
+        size:
+          $ref: "#/components/schemas/ListingSize"
+        pickup_city:
+          type: string
+        pickup_neighborhood:
+          type: string
+        delivery_enabled:
+          type: boolean
+        price_unit:
+          $ref: "#/components/schemas/PriceUnit"
+        price_amount_cents:
+          type: integer
+        deposit_cents:
+          type: integer
+        min_lead_time_hours:
+          type: integer
+        photos:
+          type: array
+          items:
+            type: string
+        rules:
+          $ref: "#/components/schemas/ListingRules"
+        operator_mode:
+          $ref: "#/components/schemas/OperatorMode"
+        operator_hourly_rate_cents:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    ListingPage:
+      type: object
+      required: [page, page_size, total, items]
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicListing"
+    AvailabilityBlock:
+      type: object
+      required: [id, listing_id, starts_at, ends_at, reason, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        listing_id:
+          type: string
+          format: uuid
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          description: Free-text owner-side reason.
+        created_at:
+          type: string
+          format: date-time
+    AddBlockRequest:
+      type: object
+      required: [starts_at, ends_at]
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          maxLength: 240
+    PublicCalendar:
+      type: object
+      required: [listing_id, min_lead_time_hours, blocks]
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        min_lead_time_hours:
+          type: integer
+        blocks:
+          type: array
+          items:
+            type: object
+            required: [starts_at, ends_at]
+            properties:
+              starts_at:
+                type: string
+                format: date-time
+              ends_at:
+                type: string
+                format: date-time
+    CategoryConfig:
+      type: object
+      required: [category, size, deposit_min_cents]
+      properties:
+        category:
+          $ref: "#/components/schemas/ListingCategory"
+        size:
+          $ref: "#/components/schemas/ListingSize"
+        deposit_min_cents:
+          type: integer
+          minimum: 0
+    OwnerOnboarding:
+      type: object
+      required: [payout_set, terms_accepted, terms_version]
+      properties:
+        payout_set:
+          type: boolean
+        terms_accepted:
+          type: boolean
+        terms_version:
+          type: string
+        terms_accepted_at:
+          type: string
+          format: date-time
+        payout_kind:
+          type: string
+          description: Opaque payout kind (e.g. pix, bank).
+        payout_last4:
+          type: string
+    UpdateOwnerOnboardingRequest:
+      type: object
+      properties:
+        payout_kind:
+          type: string
+        payout_last4:
+          type: string
+        accept_terms:
+          type: boolean
+        terms_version:
+          type: string
   responses:
     Unauthorized:
       description: Missing or unknown session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
       content:
         application/json:
           schema:

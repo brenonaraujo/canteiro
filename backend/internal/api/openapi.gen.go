@@ -8,12 +8,16 @@ import (
 	"compress/flate"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for AccountStatus.
@@ -31,6 +35,111 @@ func (e AccountStatus) Valid() bool {
 	case Deactivated:
 		return true
 	case Incomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListingCategory.
+const (
+	ListingCategoryAgricultural      ListingCategory = "agricultural"
+	ListingCategoryElectric          ListingCategory = "electric"
+	ListingCategoryHeavy             ListingCategory = "heavy"
+	ListingCategoryLightConstruction ListingCategory = "light_construction"
+	ListingCategoryManual            ListingCategory = "manual"
+)
+
+// Valid indicates whether the value is a known member of the ListingCategory enum.
+func (e ListingCategory) Valid() bool {
+	switch e {
+	case ListingCategoryAgricultural:
+		return true
+	case ListingCategoryElectric:
+		return true
+	case ListingCategoryHeavy:
+		return true
+	case ListingCategoryLightConstruction:
+		return true
+	case ListingCategoryManual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListingSize.
+const (
+	ListingSizeHeavy ListingSize = "heavy"
+	ListingSizeLight ListingSize = "light"
+)
+
+// Valid indicates whether the value is a known member of the ListingSize enum.
+func (e ListingSize) Valid() bool {
+	switch e {
+	case ListingSizeHeavy:
+		return true
+	case ListingSizeLight:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListingState.
+const (
+	Draft     ListingState = "draft"
+	Paused    ListingState = "paused"
+	Published ListingState = "published"
+)
+
+// Valid indicates whether the value is a known member of the ListingState enum.
+func (e ListingState) Valid() bool {
+	switch e {
+	case Draft:
+		return true
+	case Paused:
+		return true
+	case Published:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OperatorMode.
+const (
+	None     OperatorMode = "none"
+	Optional OperatorMode = "optional"
+	Required OperatorMode = "required"
+)
+
+// Valid indicates whether the value is a known member of the OperatorMode enum.
+func (e OperatorMode) Valid() bool {
+	switch e {
+	case None:
+		return true
+	case Optional:
+		return true
+	case Required:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PriceUnit.
+const (
+	Day  PriceUnit = "day"
+	Hour PriceUnit = "hour"
+)
+
+// Valid indicates whether the value is a known member of the PriceUnit enum.
+func (e PriceUnit) Valid() bool {
+	switch e {
+	case Day:
+		return true
+	case Hour:
 		return true
 	default:
 		return false
@@ -78,6 +187,50 @@ type AccountCapabilities struct {
 	Reserve bool `json:"reserve"`
 }
 
+// AddBlockRequest defines model for AddBlockRequest.
+type AddBlockRequest struct {
+	EndsAt   time.Time `json:"ends_at"`
+	Reason   *string   `json:"reason,omitempty"`
+	StartsAt time.Time `json:"starts_at"`
+}
+
+// AvailabilityBlock defines model for AvailabilityBlock.
+type AvailabilityBlock struct {
+	CreatedAt time.Time          `json:"created_at"`
+	EndsAt    time.Time          `json:"ends_at"`
+	Id        openapi_types.UUID `json:"id"`
+	ListingId openapi_types.UUID `json:"listing_id"`
+
+	// Reason Free-text owner-side reason.
+	Reason   string    `json:"reason"`
+	StartsAt time.Time `json:"starts_at"`
+}
+
+// CategoryConfig defines model for CategoryConfig.
+type CategoryConfig struct {
+	Category        ListingCategory `json:"category"`
+	DepositMinCents int             `json:"deposit_min_cents"`
+	Size            ListingSize     `json:"size"`
+}
+
+// CreateListingRequest defines model for CreateListingRequest.
+type CreateListingRequest struct {
+	Category           ListingCategory  `json:"category"`
+	Delivery           *ListingDelivery `json:"delivery,omitempty"`
+	DepositCents       int              `json:"deposit_cents"`
+	Description        string           `json:"description"`
+	HeavyLegalCession  *bool            `json:"heavy_legal_cession,omitempty"`
+	MinLeadTimeHours   int              `json:"min_lead_time_hours"`
+	Operator           ListingOperator  `json:"operator"`
+	Photos             *[]string        `json:"photos,omitempty"`
+	PickupCity         string           `json:"pickup_city"`
+	PickupNeighborhood string           `json:"pickup_neighborhood"`
+	PriceAmountCents   int              `json:"price_amount_cents"`
+	PriceUnit          PriceUnit        `json:"price_unit"`
+	Rules              *ListingRules    `json:"rules,omitempty"`
+	Title              string           `json:"title"`
+}
+
 // DeactivateAccountRequest defines model for DeactivateAccountRequest.
 type DeactivateAccountRequest struct {
 	// Confirm Example: true
@@ -103,6 +256,128 @@ type HealthResponse struct {
 
 	// Status Example: ok
 	Status string `json:"status"`
+}
+
+// Listing defines model for Listing.
+type Listing struct {
+	Category     ListingCategory `json:"category"`
+	CreatedAt    *time.Time      `json:"created_at,omitempty"`
+	Delivery     ListingDelivery `json:"delivery"`
+	DepositCents int             `json:"deposit_cents"`
+	Description  string          `json:"description"`
+
+	// HeavyLegalCession Required true for `heavy` category when published.
+	HeavyLegalCession  *bool              `json:"heavy_legal_cession,omitempty"`
+	Id                 openapi_types.UUID `json:"id"`
+	MinLeadTimeHours   int                `json:"min_lead_time_hours"`
+	Operator           ListingOperator    `json:"operator"`
+	OwnerAccountId     openapi_types.UUID `json:"owner_account_id"`
+	Photos             []string           `json:"photos"`
+	PickupCity         string             `json:"pickup_city"`
+	PickupNeighborhood string             `json:"pickup_neighborhood"`
+	PriceAmountCents   int                `json:"price_amount_cents"`
+	PriceUnit          PriceUnit          `json:"price_unit"`
+	Rules              ListingRules       `json:"rules"`
+	Size               *ListingSize       `json:"size,omitempty"`
+	State              ListingState       `json:"state"`
+	Title              string             `json:"title"`
+	UpdatedAt          *time.Time         `json:"updated_at,omitempty"`
+}
+
+// ListingCategory defines model for ListingCategory.
+type ListingCategory string
+
+// ListingDelivery defines model for ListingDelivery.
+type ListingDelivery struct {
+	// Coverage Free-text delivery area; non-empty when enabled.
+	Coverage string `json:"coverage"`
+	Enabled  bool   `json:"enabled"`
+}
+
+// ListingOperator defines model for ListingOperator.
+type ListingOperator struct {
+	HourlyRateCents *int              `json:"hourly_rate_cents,omitempty"`
+	Identity        *OperatorIdentity `json:"identity,omitempty"`
+	MinHours        *int              `json:"min_hours,omitempty"`
+	Mode            OperatorMode      `json:"mode"`
+}
+
+// ListingPage defines model for ListingPage.
+type ListingPage struct {
+	Items    []PublicListing `json:"items"`
+	Page     int             `json:"page"`
+	PageSize int             `json:"page_size"`
+	Total    int             `json:"total"`
+}
+
+// ListingRules defines model for ListingRules.
+type ListingRules struct {
+	DocumentRequired   *bool `json:"document_required,omitempty"`
+	ExperienceRequired *bool `json:"experience_required,omitempty"`
+	MinAge             *int  `json:"min_age,omitempty"`
+	TravelRestricted   *bool `json:"travel_restricted,omitempty"`
+}
+
+// ListingSize defines model for ListingSize.
+type ListingSize string
+
+// ListingState defines model for ListingState.
+type ListingState string
+
+// OperatorIdentity defines model for OperatorIdentity.
+type OperatorIdentity struct {
+	// IsOwner True when the operator is the listing owner.
+	IsOwner bool   `json:"is_owner"`
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
+}
+
+// OperatorMode defines model for OperatorMode.
+type OperatorMode string
+
+// OwnerOnboarding defines model for OwnerOnboarding.
+type OwnerOnboarding struct {
+	// PayoutKind Opaque payout kind (e.g. pix, bank).
+	PayoutKind      *string    `json:"payout_kind,omitempty"`
+	PayoutLast4     *string    `json:"payout_last4,omitempty"`
+	PayoutSet       bool       `json:"payout_set"`
+	TermsAccepted   bool       `json:"terms_accepted"`
+	TermsAcceptedAt *time.Time `json:"terms_accepted_at,omitempty"`
+	TermsVersion    string     `json:"terms_version"`
+}
+
+// PriceUnit defines model for PriceUnit.
+type PriceUnit string
+
+// PublicCalendar defines model for PublicCalendar.
+type PublicCalendar struct {
+	Blocks []struct {
+		EndsAt   time.Time `json:"ends_at"`
+		StartsAt time.Time `json:"starts_at"`
+	} `json:"blocks"`
+	ListingId        openapi_types.UUID `json:"listing_id"`
+	MinLeadTimeHours int                `json:"min_lead_time_hours"`
+}
+
+// PublicListing defines model for PublicListing.
+type PublicListing struct {
+	Category                ListingCategory    `json:"category"`
+	CreatedAt               time.Time          `json:"created_at"`
+	DeliveryEnabled         *bool              `json:"delivery_enabled,omitempty"`
+	DepositCents            int                `json:"deposit_cents"`
+	Description             string             `json:"description"`
+	Id                      openapi_types.UUID `json:"id"`
+	MinLeadTimeHours        int                `json:"min_lead_time_hours"`
+	OperatorHourlyRateCents *int               `json:"operator_hourly_rate_cents,omitempty"`
+	OperatorMode            *OperatorMode      `json:"operator_mode,omitempty"`
+	Photos                  []string           `json:"photos"`
+	PickupCity              string             `json:"pickup_city"`
+	PickupNeighborhood      string             `json:"pickup_neighborhood"`
+	PriceAmountCents        int                `json:"price_amount_cents"`
+	PriceUnit               PriceUnit          `json:"price_unit"`
+	Rules                   ListingRules       `json:"rules"`
+	Size                    ListingSize        `json:"size"`
+	Title                   string             `json:"title"`
 }
 
 // ReadyResponse defines model for ReadyResponse.
@@ -132,8 +407,37 @@ type UpdateAccountRequest struct {
 	Phone string `json:"phone"`
 }
 
+// UpdateListingRequest defines model for UpdateListingRequest.
+type UpdateListingRequest struct {
+	Category           *ListingCategory `json:"category,omitempty"`
+	Delivery           *ListingDelivery `json:"delivery,omitempty"`
+	DepositCents       *int             `json:"deposit_cents,omitempty"`
+	Description        *string          `json:"description,omitempty"`
+	HeavyLegalCession  *bool            `json:"heavy_legal_cession,omitempty"`
+	MinLeadTimeHours   *int             `json:"min_lead_time_hours,omitempty"`
+	Operator           *ListingOperator `json:"operator,omitempty"`
+	Photos             *[]string        `json:"photos,omitempty"`
+	PickupCity         *string          `json:"pickup_city,omitempty"`
+	PickupNeighborhood *string          `json:"pickup_neighborhood,omitempty"`
+	PriceAmountCents   *int             `json:"price_amount_cents,omitempty"`
+	PriceUnit          *PriceUnit       `json:"price_unit,omitempty"`
+	Rules              *ListingRules    `json:"rules,omitempty"`
+	Title              *string          `json:"title,omitempty"`
+}
+
+// UpdateOwnerOnboardingRequest defines model for UpdateOwnerOnboardingRequest.
+type UpdateOwnerOnboardingRequest struct {
+	AcceptTerms  *bool   `json:"accept_terms,omitempty"`
+	PayoutKind   *string `json:"payout_kind,omitempty"`
+	PayoutLast4  *string `json:"payout_last4,omitempty"`
+	TermsVersion *string `json:"terms_version,omitempty"`
+}
+
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
+
+// NotFound defines model for NotFound.
+type NotFound = Error
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
@@ -141,11 +445,42 @@ type Unauthorized = Error
 // Unprocessable defines model for Unprocessable.
 type Unprocessable = Error
 
+// SearchCatalogParams defines parameters for SearchCatalog.
+type SearchCatalogParams struct {
+	Category      *ListingCategory    `form:"category,omitempty" json:"category,omitempty"`
+	City          *string             `form:"city,omitempty" json:"city,omitempty"`
+	From          *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To            *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+	OperatorMode  *OperatorMode       `form:"operator_mode,omitempty" json:"operator_mode,omitempty"`
+	Size          *ListingSize        `form:"size,omitempty" json:"size,omitempty"`
+	MinPriceCents *int                `form:"min_price_cents,omitempty" json:"min_price_cents,omitempty"`
+	MaxPriceCents *int                `form:"max_price_cents,omitempty" json:"max_price_cents,omitempty"`
+	Page          *int                `form:"page,omitempty" json:"page,omitempty"`
+}
+
+// GetPublicCalendarParams defines parameters for GetPublicCalendar.
+type GetPublicCalendarParams struct {
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To   *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
 // UpdateAccountJSONRequestBody defines body for UpdateAccount for application/json ContentType.
 type UpdateAccountJSONRequestBody = UpdateAccountRequest
 
 // DeactivateAccountJSONRequestBody defines body for DeactivateAccount for application/json ContentType.
 type DeactivateAccountJSONRequestBody = DeactivateAccountRequest
+
+// CreateListingDraftJSONRequestBody defines body for CreateListingDraft for application/json ContentType.
+type CreateListingDraftJSONRequestBody = CreateListingRequest
+
+// UpdateListingJSONRequestBody defines body for UpdateListing for application/json ContentType.
+type UpdateListingJSONRequestBody = UpdateListingRequest
+
+// AddBlockJSONRequestBody defines body for AddBlock for application/json ContentType.
+type AddBlockJSONRequestBody = AddBlockRequest
+
+// UpdateOwnerOnboardingJSONRequestBody defines body for UpdateOwnerOnboarding for application/json ContentType.
+type UpdateOwnerOnboardingJSONRequestBody = UpdateOwnerOnboardingRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -167,9 +502,54 @@ type ServerInterface interface {
 	// Logout End the current session
 	// (POST /auth/logout)
 	Logout(c *gin.Context)
+	// ListCategories Listing categories (config)
+	// (GET /catalog/categories)
+	ListCategories(c *gin.Context)
+	// SearchCatalog Public search (no login required)
+	// (GET /catalog/listings)
+	SearchCatalog(c *gin.Context, params SearchCatalogParams)
+	// GetPublicListing Public ficha (no login required)
+	// (GET /catalog/listings/{id})
+	GetPublicListing(c *gin.Context, id openapi_types.UUID)
+	// GetPublicCalendar Public calendar (no login required)
+	// (GET /catalog/listings/{id}/calendar)
+	GetPublicCalendar(c *gin.Context, id openapi_types.UUID, params GetPublicCalendarParams)
 	// Healthz Liveness probe
 	// (GET /healthz)
 	Healthz(c *gin.Context)
+	// ListMineListings List the caller's listings
+	// (GET /listings)
+	ListMineListings(c *gin.Context)
+	// CreateListingDraft Create a draft listing
+	// (POST /listings)
+	CreateListingDraft(c *gin.Context)
+	// GetMyListing Get one of the caller's listings (private)
+	// (GET /listings/{id})
+	GetMyListing(c *gin.Context, id openapi_types.UUID)
+	// UpdateListing Update a draft or paused listing
+	// (PATCH /listings/{id})
+	UpdateListing(c *gin.Context, id openapi_types.UUID)
+	// ListBlocks Owner view of availability blocks
+	// (GET /listings/{id}/blocks)
+	ListBlocks(c *gin.Context, id openapi_types.UUID)
+	// AddBlock Add an availability block
+	// (POST /listings/{id}/blocks)
+	AddBlock(c *gin.Context, id openapi_types.UUID)
+	// RemoveBlock Remove an availability block
+	// (DELETE /listings/{id}/blocks/{blockId})
+	RemoveBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	// PauseListing Pause a published listing
+	// (POST /listings/{id}/pause)
+	PauseListing(c *gin.Context, id openapi_types.UUID)
+	// PublishListing Publish (or unpause) a listing
+	// (POST /listings/{id}/publish)
+	PublishListing(c *gin.Context, id openapi_types.UUID)
+	// GetOwnerOnboarding Owner onboarding state
+	// (GET /owner/onboarding)
+	GetOwnerOnboarding(c *gin.Context)
+	// UpdateOwnerOnboarding Update payout details and/or accept terms
+	// (PATCH /owner/onboarding)
+	UpdateOwnerOnboarding(c *gin.Context)
 	// Readyz Readiness probe
 	// (GET /readyz)
 	Readyz(c *gin.Context)
@@ -262,6 +642,179 @@ func (siw *ServerInterfaceWrapper) Logout(c *gin.Context) {
 	siw.Handler.Logout(c)
 }
 
+// ListCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListCategories(c)
+}
+
+// SearchCatalog operation middleware
+func (siw *ServerInterfaceWrapper) SearchCatalog(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchCatalogParams
+
+	// ------------- Optional query parameter "category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category", c.Request.URL.Query(), &params.Category, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter category: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "city" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "city", c.Request.URL.Query(), &params.City, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter city: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", c.Request.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter from: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", c.Request.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter to: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "operator_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "operator_mode", c.Request.URL.Query(), &params.OperatorMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter operator_mode: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "size" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "size", c.Request.URL.Query(), &params.Size, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter size: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "min_price_cents" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "min_price_cents", c.Request.URL.Query(), &params.MinPriceCents, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter min_price_cents: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "max_price_cents" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "max_price_cents", c.Request.URL.Query(), &params.MaxPriceCents, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter max_price_cents: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", c.Request.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter page: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SearchCatalog(c, params)
+}
+
+// GetPublicListing operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicListing(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicListing(c, id)
+}
+
+// GetPublicCalendar operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicCalendar(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicCalendarParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", c.Request.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter from: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", c.Request.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter to: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicCalendar(c, id, params)
+}
+
 // Healthz operation middleware
 func (siw *ServerInterfaceWrapper) Healthz(c *gin.Context) {
 
@@ -273,6 +826,242 @@ func (siw *ServerInterfaceWrapper) Healthz(c *gin.Context) {
 	}
 
 	siw.Handler.Healthz(c)
+}
+
+// ListMineListings operation middleware
+func (siw *ServerInterfaceWrapper) ListMineListings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListMineListings(c)
+}
+
+// CreateListingDraft operation middleware
+func (siw *ServerInterfaceWrapper) CreateListingDraft(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateListingDraft(c)
+}
+
+// GetMyListing operation middleware
+func (siw *ServerInterfaceWrapper) GetMyListing(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetMyListing(c, id)
+}
+
+// UpdateListing operation middleware
+func (siw *ServerInterfaceWrapper) UpdateListing(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateListing(c, id)
+}
+
+// ListBlocks operation middleware
+func (siw *ServerInterfaceWrapper) ListBlocks(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListBlocks(c, id)
+}
+
+// AddBlock operation middleware
+func (siw *ServerInterfaceWrapper) AddBlock(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddBlock(c, id)
+}
+
+// RemoveBlock operation middleware
+func (siw *ServerInterfaceWrapper) RemoveBlock(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "blockId" -------------
+	var blockId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "blockId", c.Param("blockId"), &blockId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter blockId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveBlock(c, id, blockId)
+}
+
+// PauseListing operation middleware
+func (siw *ServerInterfaceWrapper) PauseListing(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PauseListing(c, id)
+}
+
+// PublishListing operation middleware
+func (siw *ServerInterfaceWrapper) PublishListing(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PublishListing(c, id)
+}
+
+// GetOwnerOnboarding operation middleware
+func (siw *ServerInterfaceWrapper) GetOwnerOnboarding(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetOwnerOnboarding(c)
+}
+
+// UpdateOwnerOnboarding operation middleware
+func (siw *ServerInterfaceWrapper) UpdateOwnerOnboarding(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateOwnerOnboarding(c)
 }
 
 // Readyz operation middleware
@@ -323,6 +1112,21 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/account", wrapper.GetAccount)
 	router.PATCH(options.BaseURL+"/account", wrapper.UpdateAccount)
 	router.POST(options.BaseURL+"/account/deactivate", wrapper.DeactivateAccount)
+	router.GET(options.BaseURL+"/listings", wrapper.ListMineListings)
+	router.POST(options.BaseURL+"/listings", wrapper.CreateListingDraft)
+	router.GET(options.BaseURL+"/listings/:id", wrapper.GetMyListing)
+	router.PATCH(options.BaseURL+"/listings/:id", wrapper.UpdateListing)
+	router.POST(options.BaseURL+"/listings/:id/publish", wrapper.PublishListing)
+	router.POST(options.BaseURL+"/listings/:id/pause", wrapper.PauseListing)
+	router.GET(options.BaseURL+"/listings/:id/blocks", wrapper.ListBlocks)
+	router.POST(options.BaseURL+"/listings/:id/blocks", wrapper.AddBlock)
+	router.DELETE(options.BaseURL+"/listings/:id/blocks/:blockId", wrapper.RemoveBlock)
+	router.GET(options.BaseURL+"/owner/onboarding", wrapper.GetOwnerOnboarding)
+	router.PATCH(options.BaseURL+"/owner/onboarding", wrapper.UpdateOwnerOnboarding)
+	router.GET(options.BaseURL+"/catalog/listings", wrapper.SearchCatalog)
+	router.GET(options.BaseURL+"/catalog/listings/:id", wrapper.GetPublicListing)
+	router.GET(options.BaseURL+"/catalog/listings/:id/calendar", wrapper.GetPublicCalendar)
+	router.GET(options.BaseURL+"/catalog/categories", wrapper.ListCategories)
 }
 
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
@@ -330,40 +1134,92 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"zFjNchu5EX6VLiQHuTIeUtK6ymFVDlpZWqui9Sr6OUkqCwSaHKwwwCyAoczd4sOkcsgpT+EXSzUww+HP",
-	"SLKzVmV1IkX0D77+0P0BvzFhy8oaNMGz0W/Moa+s8Ri/HFs3VlKioS/CmoAm0EdeVVoJHpQ1g5+9jT97",
-	"UWDJ6dOfHU7YiP1p0HkepF/94Mg569hisciYRC+cqsgJG7GDOhRoAnlFCeM6gLEBuNb2ASVbZOzK8DoU",
-	"1qlfUb58Oj8q75WZgnVQm3tjHwx49J5+jLlUzgr0no81vnwyF1hyggZmXCsZXcOEK03ALLLGeyzYgRC2",
-	"TnlUzlbogkqVFLziY6VV+/2pPBonh6smlJPylebzj4aXcc9hXiEbMR+cMlNaoGJdNsqafIGSsHN1dfLu",
-	"Fcu2DavCmn6XPvBQx4TR1CUbXTNlKGONAVnGuAhqRh8kxo/EHXa7FWGRMYe/1MoRc64pz6XnjW21uWTr",
-	"gHUu7fhnFIFS60NpC/aqHmvlix5c9AOfe5hw7RGUgeNd2LEPBh1YM7bcSSKf8nC8t4LY2FqNPDLQoUc3",
-	"w23Hl65GeCjQQOXsRGkkLy1kwI0E3pbEwxK/zQAbiLXRsuWG+hB5tyxCg805/lKj72OjNRPlyljXT5xy",
-	"Y6Pganw2kdawL3w6Pj2xJK4FYvVqJ+mhY0kHe9qD7akVXJMVFHXJDbQLH/fx8R7n68EpdP50Blt7lhSi",
-	"C7bquw+I98h1KM6bRr6NCNVSiQ1QBDcBlbN9m1k5hcv19v7ZxBuzvhTPkcv54xm+QAU2Omqgzg1q960B",
-	"WpCt7MxRbnnf/rLfBV3TwKJ7ljFjw8f0+fYLgfwaDlxV8gvO4WZL7/Z0YDhF4Z9O0UxDwUZvhxkrlWm/",
-	"7j7Vxjs3f3nzZnf3r+3fusf9vWc8bqDQ26i39x6rJGqnwvyCBlrbBey9QhIZ9E0RB9K/qBJx98syfmwH",
-	"/dI1r9TfcZ4mszIT2058LiKmjf1hR4PaaTZiRQiVHw0GreN87NBYkwtt6yhp1jl5vAuH5HQESpISklwi",
-	"/GDtVGMGFbqJ0lB+/o9Rpc1A26mtAyBI9Jya7ud/f/6XzW/MBZYgePj8T1qRQercPIOKT3mJJliwNVwE",
-	"pyqypSEh60CGLGNaCWzOY7OnH08uKdGggl7dIhycnbCMzdD5lPsw38uHtNJWaHil2Ijt58N8n+rEQxFL",
-	"MOCdOJli2D6U5xhqZzyEAkFwrdG1syqHDzhDB8oIXUv0DSzg61j07MZgyZXOSK7ZUNDKCOFEofMwxrk1",
-	"MrqN40u0ozHtmg5E1FQnko3YDxhaEZWti+G94fCbSb02RI/YO6ydQxParROo3w13H3O4zHCwpo9XTwEb",
-	"Xa/z//p2cZsxX5cld/OeiBkLfOrpyLX/uV3EOooeIXNUVmEORBcCPx5KUhYOqTAoczhM2oP0zNiGAkp+",
-	"j7HGN6ZVIqjVVFE/DrYhLMLO8f6rHM6S3CBjH0gwjbUV9yhh53jvVV/51voeSw0Effjeyvk3K15vb12s",
-	"tytSM4v/D4FSevJ3EoiM9p836m6IZLG39yVhVu9OX0XUtDOYKR/ZEklHirbV7Nu0XWTLtjPo7ghxEFrf",
-	"04JOnMPY1aI6MDDbzeFUeWKvB418tmwhHrkTBfEQlJlxp7gJxMgT87pydurQ0yEwgWsP3GG8zQpuBGod",
-	"6bu/bnaemENSPSrcvxGB+gi+JbJfiOSPivk/DtG7FL8B2V+Yul2uYB/Mk602crYOxWAah9wT41IqhyJ4",
-	"aptpIObwk9HzdjoKhzygBw6z3eUkJYYGdK6uCDbrwOGk9iiJeJ6mQGtlUMVJ2jZpY137BNLHy4vAXUiB",
-	"IwIblNgf7j2+g24DLGMFcokuGpHaT0tX2bKpEgmwN6lXvewzzEnUFGFO8mGmJKkMn841ndlp7drBu6x6",
-	"BGUpVtTUvFZmteYE1FbBB6R9xlzcP1r5o0+i4GaaSsu1ksuKW4nZsoKxuCTIkqRqCpndGI+BTJtqQuJt",
-	"FlupWyUVWT3gGHhV5TfmHzW6OVTc8dLDHYW6y+CO7ib0gYzvkKC7i/2OrjYwcbaMXq7OT/Mbc1kgeGra",
-	"6/INTBR3HV09Cts9VOQ35gDk9llPMoP2hxJ8UFqvrurVdjHsYQvv11J0BY7/jadr3Ggw+IlOC4gup8fI",
-	"kRT/46PryEgPfO0VlQtqVjm8s5iI2uGzyogbQ8WT7aJCSQTdDL0+GE9TJltN/7uee3ZDMTSyFRUvKmWP",
-	"Gp0vGkm7cpXbhrWI7yS/Pnsf2RsO04saeX5/eXkGzRiIT2hazWhQLzEWBYp7oGJG1ZoeDHpxfN/Ef8Hp",
-	"ufEU1PfuTvlvtK1TNUND+6ucHa8KK1v5Brv4cvEV0G3iEblZBQiOTyZKRAWUTN4M99Md7kF5zCF2Y6j4",
-	"XFsuk5SaokGnBOwYC+8uPgzOTk5IQnVvQ3fN68gdTKzW9sHDQYz2+pSbac2nCDtoMqjC6+/PM0BP1u9w",
-	"wmsdQJOXeIWJP/fV7Tzt/QXLtv481lO1uIB948H3bNQPNkB6slrnCxmqpwjTvJzFdnnd+6a39mgyGgxi",
-	"GQrrw+jt8O2Q0SlvfG6ZN2TNYmoxje5Nh+Ivsk2TpvWqdp5T++s6RWMaG8W27Vnzqh5bZttO1w1bKXq7",
-	"+G8AAAD//w==",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
