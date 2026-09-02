@@ -23,6 +23,7 @@ const navItems = computed(() => [
     <UNavigationMenu :items="navItems" />
 
     <template #right>
+      <AccountMenu />
       <LocaleSwitcher />
       <UColorModeButton :aria-label="t('a11y.color_mode')" />
     </template>
@@ -33,9 +34,12 @@ const navItems = computed(() => [
         orientation="vertical"
         class="-mx-2"
       />
-      <div class="flex items-center gap-2 mt-4">
-        <LocaleSwitcher />
-        <UColorModeButton :aria-label="t('a11y.color_mode')" />
+      <div class="flex flex-col gap-4 mt-4">
+        <AccountMenu />
+        <div class="flex items-center gap-2">
+          <LocaleSwitcher />
+          <UColorModeButton :aria-label="t('a11y.color_mode')" />
+        </div>
       </div>
     </template>
   </UHeader>

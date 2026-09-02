@@ -67,6 +67,23 @@ func TestNewRouter_Metrics(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "http_requests_total")
 }
 
+func TestNewRouter_AuthGoogleUnconfigured(t *testing.T) {
+	require.NoError(t, loadI18n(t))
+	r := NewRouter(ServerOpts{ServiceName: "canteiro"})
+	w := perform(r, http.MethodGet, "/auth/google", "pt-BR")
+	require.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Contains(t, w.Body.String(), "auth.not_configured")
+}
+
+func TestNewRouter_CORSPreflight(t *testing.T) {
+	r := NewRouter(ServerOpts{CORSOrigin: "http://localhost:3000"})
+	req := httptest.NewRequest(http.MethodOptions, "/account", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, "http://localhost:3000", w.Header().Get("Access-Control-Allow-Origin"))
+}
+
 func loadI18n(t *testing.T) error {
 	t.Helper()
 	_, err := i18n.Load()

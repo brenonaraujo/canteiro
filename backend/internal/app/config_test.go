@@ -28,6 +28,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	require.Equal(t, "canteiro", cfg.ServiceName)
 	require.Equal(t, "pt-BR", cfg.DefaultLocale)
 	require.Equal(t, 30*time.Second, cfg.ShutdownTimeout)
+	require.Equal(t, "http://localhost:3000", cfg.WebAppURL)
+	require.Equal(t, "canteiro_session", cfg.SessionCookieName)
+	require.False(t, cfg.SessionCookieSecure)
 }
 
 //nolint:paralleltest // t.Setenv is incompatible with t.Parallel
@@ -49,4 +52,7 @@ func TestLoadConfig_Overrides(t *testing.T) {
 	require.Equal(t, "canteiro-api", cfg.ServiceName)
 	require.Equal(t, "en", cfg.DefaultLocale)
 	require.Equal(t, 5*time.Second, cfg.ShutdownTimeout)
+	require.Equal(t, "http://localhost:3000", cfg.WebAppURL)
+	require.Equal(t, "canteiro_session", cfg.SessionCookieName)
+	require.False(t, cfg.SessionCookieSecure)
 }

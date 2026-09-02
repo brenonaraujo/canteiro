@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: Canteiro API
-  version: 0.1.0
+  version: 0.2.0
   description: |
-    Fundação (F0): processo HTTP observável. Sem catálogo, locação,
-    Google ou Stripe de produto.
+    F1 Conta: identidade Google, perfil mínimo, logout e desativação.
+    Sem catálogo, reserva, pagamento ou Stripe de produto.
   contact:
     name: Canteiro
     url: https://canteiro.brenon.cloud
@@ -16,6 +16,10 @@ servers:
 tags:
   - name: ops
     description: Liveness, readiness
+  - name: auth
+    description: Google identity and session
+  - name: account
+    description: Profile and deactivation
 paths:
   /healthz:
     get:
@@ -55,7 +59,141 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadyResponse"
+  /auth/google:
+    get:
+      operationId: StartGoogleAuth
+      tags: [auth]
+      summary: Start Google sign-in
+      description: |
+        Redirects to Google. Only Google creates a v1 account.
+        Interrupted or refused consent creates neither account nor session.
+      responses:
+        "302":
+          description: Redirect to Google
+          headers:
+            Location:
+              schema:
+                type: string
+        "503":
+          description: Identity provider is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/google/callback:
+    get:
+      operationId: GoogleCallback
+      tags: [auth]
+      summary: Google OAuth callback
+      description: |
+        Exchanges a valid Google code, creates or reopens the account,
+        sets a session cookie, and redirects to the web app.
+        Query params `code`, `state`, and `error` are read from the URL.
+        The same Google subject never creates a second account.
+        A deactivated account is reopened still deactivated.
+      responses:
+        "302":
+          description: Redirect to the web app
+          headers:
+            Location:
+              schema:
+                type: string
+  /auth/logout:
+    post:
+      operationId: Logout
+      tags: [auth]
+      summary: End the current session
+      description: |
+        Ends authenticated access. Does not deactivate the account
+        and does not hide listings.
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: Session ended
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /account:
+    get:
+      operationId: GetAccount
+      tags: [account]
+      summary: Current account
+      description: |
+        Returns the caller account. Never includes Google subject,
+        email, or other identifiers beyond the public profile.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      operationId: UpdateAccount
+      tags: [account]
+      summary: Update visible name and phone
+      description: |
+        Empty name or phone is rejected. Completing both makes the
+        account eligible to reserve (F3). Publishing stays blocked (F2).
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountRequest"
+      responses:
+        "200":
+          description: Updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /account/deactivate:
+    post:
+      operationId: DeactivateAccount
+      tags: [account]
+      summary: Deactivate own account
+      description: |
+        Irreversible in v1. Listings leave public search (F2 invariant).
+        In-progress rentals are not cancelled (F3 invariant).
+        Requires confirm=true.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeactivateAccountRequest"
+      responses:
+        "200":
+          description: Deactivated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: canteiro_session
   schemas:
     HealthResponse:
       type: object
@@ -84,3 +222,82 @@ components:
           type: string
           description: Stable i18n key
           example: ready.ok
+    Error:
+      type: object
+      required: [code, message, message_key]
+      properties:
+        code:
+          type: string
+          example: unauthorized
+        message:
+          type: string
+          description: Localized human message
+        message_key:
+          type: string
+          example: auth.unauthorized
+    Account:
+      type: object
+      required: [id, status, display_name, phone, capabilities]
+      properties:
+        id:
+          type: string
+          description: Account id (UUID)
+        status:
+          type: string
+          enum: [incomplete, active, deactivated]
+        display_name:
+          type: string
+        phone:
+          type: string
+        capabilities:
+          $ref: "#/components/schemas/AccountCapabilities"
+    AccountCapabilities:
+      type: object
+      required: [reserve, publish]
+      properties:
+        reserve:
+          type: boolean
+          description: True when profile is complete and account is active
+        publish:
+          type: boolean
+          description: Always false in F1 (owner onboarding is F2)
+    UpdateAccountRequest:
+      type: object
+      required: [display_name, phone]
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: Ana
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+          example: "+5511999999999"
+    DeactivateAccountRequest:
+      type: object
+      required: [confirm]
+      properties:
+        confirm:
+          type: boolean
+          example: true
+  responses:
+    Unauthorized:
+      description: Missing or unknown session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Authenticated but not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unprocessable:
+      description: Semantic validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

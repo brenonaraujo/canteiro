@@ -2,5 +2,10 @@
   "health.ok": "El servicio está en línea",
   "ready.ok": "El servicio está listo",
   "ready.not_ready": "El servicio no está listo",
-  "error.internal": "Error interno del servidor. Intente nuevamente más tarde."
+  "error.internal": "Error interno del servidor. Intente nuevamente más tarde.",
+  "auth.unauthorized": "Inicie sesión con Google para continuar.",
+  "auth.not_configured": "El acceso con Google no está disponible.",
+  "account.invalid_profile": "El nombre visible y el teléfono son obligatorios.",
+  "account.deactivated": "Esta cuenta está desactivada.",
+  "account.confirm_required": "Confirme la desactivación para continuar."
 }

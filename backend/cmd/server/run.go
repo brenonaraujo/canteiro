@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/brenonaraujo/canteiro/backend/internal/app"
 	"github.com/brenonaraujo/canteiro/backend/internal/platform/postgres"
@@ -23,7 +24,7 @@ func run(ctx context.Context, cfg *app.Config, logger *slog.Logger) {
 	}
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           router(cfg, logger, []repository.Checker{postgres.DBChecker{DB: db}}),
+		Handler:           router(cfg, logger, []repository.Checker{postgres.DBChecker{DB: db}}, db),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go serve(srv, logger)
@@ -32,7 +33,7 @@ func run(ctx context.Context, cfg *app.Config, logger *slog.Logger) {
 	shutdown(srv, cfg.ShutdownTimeout, logger)
 }
 
-func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker) http.Handler {
+func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker, db *gorm.DB) http.Handler {
 	if cfg.GinMode != "" {
 		gin.SetMode(cfg.GinMode)
 	}
@@ -42,6 +43,8 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker)
 		GinMode:     cfg.GinMode,
 		Logger:      logger,
 		Checkers:    checkers,
+		Auth:        app.NewAuthAPI(cfg, db),
+		CORSOrigin:  cfg.WebAppURL,
 	})
 }
 

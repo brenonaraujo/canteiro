@@ -4,7 +4,10 @@
   },
   "nav": {
     "home": "Início",
-    "highlights": "Como funciona"
+    "highlights": "Como funciona",
+    "sign_in": "Entrar",
+    "sign_out": "Sair",
+    "account": "Conta"
   },
   "locale": {
     "label": "Idioma",
@@ -50,5 +53,54 @@
     "not_found": "Página não encontrada",
     "generic": "Algo deu errado. Tente de novo.",
     "home": "Voltar ao início"
+  },
+  "breadcrumb": {
+    "home": "Início",
+    "sign_in": "Entrar",
+    "account": "Conta",
+    "deactivate": "Desativar"
+  },
+  "auth": {
+    "login": {
+      "title": "Entrar no Canteiro",
+      "description": "Use sua conta Google. Sem Google não há cadastro no v1.",
+      "google": "Entrar com Google",
+      "google_only": "No v1 a identidade é só Google. Não usamos senha da plataforma.",
+      "catalog_hint": "Você pode consultar o catálogo público sem entrar."
+    },
+    "callback": {
+      "working": "Validando sua identidade Google…",
+      "error": "Não foi possível entrar com Google. Tente de novo."
+    },
+    "profile": {
+      "title": "Seu perfil",
+      "description": "Nome visível e telefone são obrigatórios antes de reservar.",
+      "display_name": "Nome visível",
+      "phone": "Telefone",
+      "save": "Salvar perfil",
+      "saved": "Perfil salvo",
+      "incomplete": "Completar perfil",
+      "required": "Nome visível e telefone não podem ficar vazios.",
+      "cancel": "Cancelar"
+    },
+    "deactivate": {
+      "title": "Desativar conta",
+      "body": "Esta ação é irreversível no v1. Você deixa de entrar com esta identidade Google.",
+      "listings": "Anúncios publicados saem da busca pública.",
+      "rentals": "Locações em curso não são canceladas automaticamente.",
+      "irreversible": "Entendo que não posso reativar esta conta sozinho.",
+      "confirm": "Confirme para desativar",
+      "submit": "Desativar conta",
+      "cancel": "Manter conta"
+    },
+    "status": {
+      "active": "Conta ativa",
+      "incomplete": "Perfil incompleto",
+      "deactivated": "Conta desativada"
+    },
+    "error": {
+      "generic": "Não foi possível concluir. Tente de novo.",
+      "deactivated": "Esta conta foi desativada e não reabre no v1."
+    }
   }
 }
