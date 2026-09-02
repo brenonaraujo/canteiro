@@ -51,4 +51,13 @@ describe('listing surface (F2)', () => {
     const header = readApp('components/common/AppHeader.vue')
     expect(header).toContain('breadcrumb.listings')
   })
+
+  // Regression: PR #14 hydration bug — Reka UI SelectItem rejects `value: ''`
+  // and renders `[object Object]`, breaking hydration of /listings.
+  // Use `value: null` for the "Any" pseudo-option instead.
+  // Refs: nuxt/ui#3647.
+  it('does not use empty-string values in any filter USelect (regression for /listings hydration)', () => {
+    const filters = readApp('components/feature/listing/ListingFilters.vue')
+    expect(filters).not.toMatch(/value:\s*''/)
+  })
 })
