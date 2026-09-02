@@ -26,11 +26,11 @@ import (
 // --- fakes -----------------------------------------------------------------
 
 type fakeRepo struct {
-	mu      sync.Mutex
 	byID    map[string]listing.Listing
 	blocks  map[string][]listing.Block
 	onboard map[string]listing.OwnerOnboarding
 	cats    []listing.CategoryConfig
+	mu      sync.Mutex
 }
 
 func newFakeRepo() *fakeRepo {
@@ -202,8 +202,8 @@ func (r *fakeRepo) SearchCatalog(_ context.Context, _ listing.SearchFilters) ([]
 }
 
 type fakeAccountLookup struct {
-	mu sync.Mutex
 	m  map[string]account.Account
+	mu sync.Mutex
 }
 
 func newAccountLookup() *fakeAccountLookup {
@@ -300,7 +300,6 @@ type openapiUUIDT = openapiUUIDReal
 func init() { _ = errors.New("placeholder") }
 
 func TestCreateListing_RequiresSession(t *testing.T) {
-	t.Parallel()
 	r := newRouter(t, "", newAccountLookup())
 	w := httptest.NewRecorder()
 	body := `{"title":"abc","description":"abcdef","category":"manual","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":1000,"deposit_cents":5000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
@@ -311,7 +310,6 @@ func TestCreateListing_RequiresSession(t *testing.T) {
 }
 
 func TestCreateListing_HappyPath(t *testing.T) {
-	t.Parallel()
 	lookup := newAccountLookup()
 	acc := account.Account{
 		ID: "owner-1", Status: account.StatusActive,
@@ -332,7 +330,6 @@ func TestCreateListing_HappyPath(t *testing.T) {
 }
 
 func TestCreateListing_InvalidPayload(t *testing.T) {
-	t.Parallel()
 	lookup := newAccountLookup()
 	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
 	r := newRouter(t, "owner-1", lookup)
@@ -344,9 +341,8 @@ func TestCreateListing_InvalidPayload(t *testing.T) {
 }
 
 func TestPublish_ForbiddenMapping(t *testing.T) {
-	t.Parallel()
 	lookup := newAccountLookup()
-	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive, DisplayName: "Owner", Phone: "+5511999999999"}
 	r := newRouter(t, "owner-1", lookup)
 	w := httptest.NewRecorder()
 	// Create a draft via the repo, then publish with no onboarding → 422 owner_onboarding_required.
@@ -366,7 +362,6 @@ func TestPublish_ForbiddenMapping(t *testing.T) {
 }
 
 func TestListCategories_Public(t *testing.T) {
-	t.Parallel()
 	r := newRouter(t, "", newAccountLookup())
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/catalog/categories", nil)
@@ -378,7 +373,6 @@ func TestListCategories_Public(t *testing.T) {
 }
 
 func TestSearchCatalog_PublicNoLogin(t *testing.T) {
-	t.Parallel()
 	r := newRouter(t, "", newAccountLookup())
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/catalog/listings?category=electric", nil)
@@ -390,7 +384,6 @@ func TestSearchCatalog_PublicNoLogin(t *testing.T) {
 }
 
 func TestGetPublicListing_DraftIs404(t *testing.T) {
-	t.Parallel()
 	lookup := newAccountLookup()
 	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
 	r := newRouter(t, "owner-1", lookup)
@@ -410,7 +403,6 @@ func TestGetPublicListing_DraftIs404(t *testing.T) {
 }
 
 func TestGetOwnerOnboarding_DefaultsEmpty(t *testing.T) {
-	t.Parallel()
 	lookup := newAccountLookup()
 	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
 	r := newRouter(t, "owner-1", lookup)
@@ -425,7 +417,6 @@ func TestGetOwnerOnboarding_DefaultsEmpty(t *testing.T) {
 }
 
 func TestAddBlock_HappyPath(t *testing.T) {
-	t.Parallel()
 	lookup := newAccountLookup()
 	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
 	r := newRouter(t, "owner-1", lookup)
