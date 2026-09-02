@@ -20,6 +20,7 @@ import (
 	"github.com/brenonaraujo/canteiro/backend/internal/domain/listing"
 	"github.com/brenonaraujo/canteiro/backend/internal/handler"
 	"github.com/brenonaraujo/canteiro/backend/internal/i18n"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // --- fakes -----------------------------------------------------------------
@@ -448,12 +449,7 @@ func TestAddBlock_HappyPath(t *testing.T) {
 
 // --- helpers ---------------------------------------------------------------
 
-type openapiUUIDReal = openapiUUIDImport
-
-// referenced so the type alias chain resolves at compile time.
-var _ = openapiUUIDImport{}
-
-type openapiUUIDImport = struct{}
+type openapiUUIDReal = openapi_types.UUID
 
 // --- fixed id generator ---------------------------------------------------
 

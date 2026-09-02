@@ -796,7 +796,6 @@ components:
           description: True when the operator is the listing owner.
     ListingRules:
       type: object
-      required: []
       properties:
         document_required:
           type: boolean
