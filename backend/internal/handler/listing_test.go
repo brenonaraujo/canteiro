@@ -26,11 +26,11 @@ import (
 // --- fakes -----------------------------------------------------------------
 
 type fakeRepo struct {
-	mu       sync.Mutex
-	byID     map[string]listing.Listing
-	blocks   map[string][]listing.Block
-	onboard  map[string]listing.OwnerOnboarding
-	cats     []listing.CategoryConfig
+	mu      sync.Mutex
+	byID    map[string]listing.Listing
+	blocks  map[string][]listing.Block
+	onboard map[string]listing.OwnerOnboarding
+	cats    []listing.CategoryConfig
 }
 
 func newFakeRepo() *fakeRepo {
@@ -206,7 +206,9 @@ type fakeAccountLookup struct {
 	m  map[string]account.Account
 }
 
-func newAccountLookup() *fakeAccountLookup { return &fakeAccountLookup{m: map[string]account.Account{}} }
+func newAccountLookup() *fakeAccountLookup {
+	return &fakeAccountLookup{m: map[string]account.Account{}}
+}
 
 func (f *fakeAccountLookup) GetByID(_ context.Context, id string) (account.Account, error) {
 	f.mu.Lock()
@@ -229,14 +231,14 @@ func newRouter(t *testing.T, sessionID string, lookup *fakeAccountLookup) *gin.E
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	svc := listing.NewService(repo, lookup, now)
 	svc.SetIDFunc(fixedID("11111111-1111-4111-8111-111111111111"))
-	api := handler.NewListingAPI(svc, func(c *gin.Context) (string, bool) {
+	listingAPI := handler.NewListingAPI(svc, func(c *gin.Context) (string, bool) {
 		if sessionID == "" {
 			return "", false
 		}
 		return sessionID, true
 	})
 	// Mount via the openapi codegen so we exercise the registered routes.
-	apiSrv := listingServer{api: api}
+	apiSrv := listingServer{api: listingAPI}
 	api.RegisterHandlers(r, apiSrv)
 	return r
 }
@@ -248,18 +250,18 @@ type listingServer struct {
 }
 
 // Override every auth/ops handler with a 404 to keep the test focused.
-func (listingServer) GetAccount(*gin.Context)                                       { panic("unused") }
-func (listingServer) UpdateAccount(*gin.Context)                                    { panic("unused") }
-func (listingServer) DeactivateAccount(*gin.Context)                               { panic("unused") }
-func (listingServer) StartGoogleAuth(*gin.Context)                                  { panic("unused") }
-func (listingServer) GoogleCallback(*gin.Context)                                   { panic("unused") }
-func (listingServer) Logout(*gin.Context)                                           { panic("unused") }
-func (listingServer) Healthz(*gin.Context)                                          { panic("unused") }
-func (listingServer) Readyz(*gin.Context)                                           { panic("unused") }
+func (listingServer) GetAccount(*gin.Context)        { panic("unused") }
+func (listingServer) UpdateAccount(*gin.Context)     { panic("unused") }
+func (listingServer) DeactivateAccount(*gin.Context) { panic("unused") }
+func (listingServer) StartGoogleAuth(*gin.Context)   { panic("unused") }
+func (listingServer) GoogleCallback(*gin.Context)    { panic("unused") }
+func (listingServer) Logout(*gin.Context)            { panic("unused") }
+func (listingServer) Healthz(*gin.Context)           { panic("unused") }
+func (listingServer) Readyz(*gin.Context)            { panic("unused") }
 
 // Listing methods — implemented.
-func (s listingServer) ListMineListings(c *gin.Context)        { s.api.ListMineListings(c) }
-func (s listingServer) CreateListingDraft(c *gin.Context)      { s.api.CreateListingDraft(c) }
+func (s listingServer) ListMineListings(c *gin.Context)   { s.api.ListMineListings(c) }
+func (s listingServer) CreateListingDraft(c *gin.Context) { s.api.CreateListingDraft(c) }
 func (s listingServer) GetMyListing(c *gin.Context, id openapiUUID) {
 	s.api.GetMyListing(c, id)
 }
@@ -273,13 +275,15 @@ func (s listingServer) AddBlock(c *gin.Context, id openapiUUID)     { s.api.AddB
 func (s listingServer) RemoveBlock(c *gin.Context, id, b openapiUUID) {
 	s.api.RemoveBlock(c, id, b)
 }
-func (s listingServer) GetOwnerOnboarding(c *gin.Context)   { s.api.GetOwnerOnboarding(c) }
+func (s listingServer) GetOwnerOnboarding(c *gin.Context)    { s.api.GetOwnerOnboarding(c) }
 func (s listingServer) UpdateOwnerOnboarding(c *gin.Context) { s.api.UpdateOwnerOnboarding(c) }
-func (s listingServer) ListCategories(c *gin.Context)       { s.api.ListCategories(c) }
+func (s listingServer) ListCategories(c *gin.Context)        { s.api.ListCategories(c) }
 func (s listingServer) SearchCatalog(c *gin.Context, p api.SearchCatalogParams) {
 	s.api.SearchCatalog(c, p)
 }
-func (s listingServer) GetPublicListing(c *gin.Context, id openapiUUID) { s.api.GetPublicListing(c, id) }
+func (s listingServer) GetPublicListing(c *gin.Context, id openapiUUID) {
+	s.api.GetPublicListing(c, id)
+}
 func (s listingServer) GetPublicCalendar(c *gin.Context, id openapiUUID, p api.GetPublicCalendarParams) {
 	s.api.GetPublicCalendar(c, id, p)
 }
