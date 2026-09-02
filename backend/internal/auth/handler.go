@@ -92,3 +92,20 @@ func (a *API) current(c *gin.Context) (account.Account, error) {
 	}
 	return acc, nil
 }
+
+// CurrentAccountID returns the authenticated account id, or ("", false) when
+// there is no session or the session cannot be resolved. Exposed for
+// handlers (e.g. F2 listing) that need only the id and don't want to import
+// the full account struct.
+func (a *API) CurrentAccountID(c *gin.Context) (string, bool) {
+	acc, err := a.current(c)
+	if err != nil {
+		return "", false
+	}
+	return acc.ID, true
+}
+
+// Accounts returns the account.Service this API was wired with. Other domain
+// services (e.g. F2 listing) depend on a slice of the account service to
+// resolve owners; exposing it here keeps the wiring in one place.
+func (a *API) Accounts() *account.Service { return a.deps.Accounts }
