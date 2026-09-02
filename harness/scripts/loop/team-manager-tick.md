@@ -11,6 +11,7 @@ Read, in order: `harness/loop.env`, `harness/PROJECT.md` (if present), `harness/
 - Worker crash (SIGINT/SIGKILL) is a **spawn/profile bug**. Fix spawn. Do not implement.
 - If there is **no new action** (spawn, merge, label move, open PR): print `idle` and **do not comment on GitHub**.
 - Do not repeat the same status comment.
+- **LABELS: use APENAS as labels canônicas listadas em AGENTS.md §4.** `path-scope:*`, `depends-on:*`, e qualquer label dinâmica são **PROIBIDAS**. path-scope e depends-on vão no **body do comentário da issue**, não como label. Se uma issue tiver labels não-canônicas, remova-as no mesmo tick.
 
 ## Board
 

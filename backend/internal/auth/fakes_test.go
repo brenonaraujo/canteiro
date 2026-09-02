@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brenonaraujo/canteiro/backend/internal/api"
@@ -150,6 +151,26 @@ type wired struct {
 
 func (wired) Healthz(c *gin.Context) { c.Status(http.StatusOK) }
 func (wired) Readyz(c *gin.Context)  { c.Status(http.StatusOK) }
+
+// Catalog/listing routes are out of scope for the auth tests; they answer 404
+// so the codegen dispatch stays satisfied without pulling in listing deps.
+func (wired) ListCategories(c *gin.Context)                           { c.Status(http.StatusNotFound) }
+func (wired) SearchCatalog(c *gin.Context, _ api.SearchCatalogParams) { c.Status(http.StatusNotFound) }
+func (wired) GetPublicListing(c *gin.Context, _ openapi_types.UUID)   { c.Status(http.StatusNotFound) }
+func (wired) GetPublicCalendar(c *gin.Context, _ openapi_types.UUID, _ api.GetPublicCalendarParams) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) ListMineListings(c *gin.Context)                     { c.Status(http.StatusNotFound) }
+func (wired) CreateListingDraft(c *gin.Context)                   { c.Status(http.StatusNotFound) }
+func (wired) GetMyListing(c *gin.Context, _ openapi_types.UUID)   { c.Status(http.StatusNotFound) }
+func (wired) UpdateListing(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
+func (wired) ListBlocks(c *gin.Context, _ openapi_types.UUID)     { c.Status(http.StatusNotFound) }
+func (wired) AddBlock(c *gin.Context, _ openapi_types.UUID)       { c.Status(http.StatusNotFound) }
+func (wired) RemoveBlock(c *gin.Context, _, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
+func (wired) PauseListing(c *gin.Context, _ openapi_types.UUID)   { c.Status(http.StatusNotFound) }
+func (wired) PublishListing(c *gin.Context, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
+func (wired) GetOwnerOnboarding(c *gin.Context)                   { c.Status(http.StatusNotFound) }
+func (wired) UpdateOwnerOnboarding(c *gin.Context)                { c.Status(http.StatusNotFound) }
 
 func do(r http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()

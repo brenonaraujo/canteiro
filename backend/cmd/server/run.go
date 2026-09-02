@@ -12,8 +12,11 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/brenonaraujo/canteiro/backend/internal/app"
+	"github.com/brenonaraujo/canteiro/backend/internal/domain/listing"
+	"github.com/brenonaraujo/canteiro/backend/internal/handler"
 	"github.com/brenonaraujo/canteiro/backend/internal/platform/postgres"
 	"github.com/brenonaraujo/canteiro/backend/internal/repository"
+	listingpg "github.com/brenonaraujo/canteiro/backend/internal/repository/listing"
 )
 
 func run(ctx context.Context, cfg *app.Config, logger *slog.Logger) {
@@ -37,13 +40,17 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker,
 	if cfg.GinMode != "" {
 		gin.SetMode(cfg.GinMode)
 	}
+	authAPI := app.NewAuthAPI(cfg, db)
+	listingSvc := listing.NewService(listingpg.New(db), authAPI.Accounts(), time.Now().UTC())
+	listingAPI := handler.NewListingAPI(listingSvc, authAPI.CurrentAccountID)
 	return app.NewRouter(app.ServerOpts{
 		ServiceName: cfg.ServiceName,
 		MetricsPath: cfg.MetricsPath,
 		GinMode:     cfg.GinMode,
 		Logger:      logger,
 		Checkers:    checkers,
-		Auth:        app.NewAuthAPI(cfg, db),
+		Auth:        authAPI,
+		Listing:     listingAPI,
 		CORSOrigin:  cfg.WebAppURL,
 	})
 }

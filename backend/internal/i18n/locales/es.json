@@ -7,5 +7,19 @@
   "auth.not_configured": "El acceso con Google no está disponible.",
   "account.invalid_profile": "El nombre visible y el teléfono son obligatorios.",
   "account.deactivated": "Esta cuenta está desactivada.",
-  "account.confirm_required": "Confirme la desactivación para continuar."
+  "account.confirm_required": "Confirme la desactivación para continuar.",
+  "listing.unauthorized": "Inicie sesión con Google para gestionar sus anuncios.",
+  "listing.forbidden": "No tiene permiso para cambiar este anuncio.",
+  "listing.not_found": "Anuncio no encontrado.",
+  "listing.invalid_input": "Los datos del anuncio son inválidos. Revise los campos e intente de nuevo.",
+  "listing.invalid_payload": "Carga útil del anuncio inválida: {{.error}}",
+  "listing.account_deactivated": "Su cuenta está desactivada. Los anuncios no pueden publicarse.",
+  "listing.profile_incomplete": "Complete el nombre visible y el teléfono para publicar.",
+  "listing.owner_onboarding_required": "Registre los datos de cobro y acepte los términos del propietario antes de publicar.",
+  "listing.publish_gates": "Revise los campos antes de publicar este anuncio.",
+  "listing.already_published": "El anuncio ya está publicado. Pausa antes de editar.",
+  "listing.not_published": "Solo los anuncios publicados pueden pausarse.",
+  "listing.not_editable": "Los anuncios publicados no se pueden editar. Pausa antes de cambiar.",
+  "listing.block_overlap": "Este bloqueo se superpone con otro existente.",
+  "listing.block_window": "El fin del bloqueo debe ser posterior al inicio."
 }
