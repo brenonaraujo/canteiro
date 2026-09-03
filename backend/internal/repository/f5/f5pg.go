@@ -168,8 +168,8 @@ func (r *ReturnRepo) Create(ctx context.Context, ret rental.Return) (rental.Retu
 		ID:                   ret.ID,
 		RentalID:             ret.RentalID,
 		State:                string(ret.State),
-		PickupEvidence:       ret.PickupEvidence,
-		ReturnEvidence:       ret.ReturnEvidence,
+		PickupEvidence:       defaultJSON(ret.PickupEvidence),
+		ReturnEvidence:       defaultJSON(ret.ReturnEvidence),
 		DepositReleasedCents: ret.DepositReleasedCents,
 		DepositCapturedCents: ret.DepositCapturedCents,
 		ReturnedAt:           ret.ReturnedAt,
@@ -268,7 +268,7 @@ func (r *DamageRepo) Create(ctx context.Context, c rental.DamageClaim) (rental.D
 		OwnerID:            c.OwnerID,
 		RenterID:           c.RenterID,
 		Description:        c.Description,
-		Evidence:           c.Evidence,
+		Evidence:           defaultJSON(c.Evidence),
 		ProposedCents:      c.ProposedCents,
 		AgreedCents:        c.AgreedCents,
 		RenterResponseKind: c.RenterResponseKind,
@@ -522,4 +522,19 @@ func (r *DebtRepo) byID(ctx context.Context, id string) (rental.Debt, error) {
 		return rental.Debt{}, err
 	}
 	return toDebt(row), nil
+}
+
+// defaultJSON mirrors the schema's `DEFAULT '{}'::jsonb` for the evidence
+// JSONB columns. GORM sends nil as SQL NULL for `[]byte` and that violates
+// the NOT NULL constraint even when the schema would have applied the
+// default — so the repository fills in "{}" before INSERT. Mirrors the
+// JSON shape the service marshals (EvidencePayload -> {"photos":..,
+// "description":.., "checklist":..}). Used by ReturnRepo.Create,
+// DamageRepo.Create (and any future Create path touching a JSONB NOT NULL
+// column without DB-side DEFAULT).
+func defaultJSON(in []byte) []byte {
+	if len(in) == 0 {
+		return []byte("{}")
+	}
+	return in
 }
