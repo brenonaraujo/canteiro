@@ -16,6 +16,12 @@ info:
     webhook idempotente cobrindo refund/chargeback/deposit events,
     bloqueio de conta do locatário em chargeback, lock serializável
     cancelamento ↔ caução.
+    F5 Devolução + avaria + dívida: ciclo de devolução, claim de
+    avaria (cosmética/funcional/perda), decisão do locatário ou
+    staff, dívida residual, settlement/forgiveness.
+    F6 Avaliação: avaliação mútua entre participantes de uma locação
+    paga em estado terminal, agregados materializados por escopo
+    (listing/owner/operator/renter), sem locação paga sem review.
   contact:
     name: Canteiro
     url: https://canteiro.brenon.cloud
@@ -41,6 +47,10 @@ tags:
     description: Payment authorization webhook (F3)
   - name: cancellations
     description: Cancellation policy + liquidation (F4)
+  - name: damage
+    description: Return, damage claim and debt (F5)
+  - name: reviews
+    description: Rental evaluation between participants (F6)
 paths:
   /healthz:
     get:
@@ -1281,6 +1291,123 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/Unprocessable"
+  /rentals/{id}/review:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: CreateRentalReview
+      tags: [reviews]
+      summary: Submit a review for a terminal rental (F6)
+      description: |
+        Records a 1..5 evaluation from the authenticated participant
+        of the rental. Only participants of an F5-terminal rental
+        may review (DoD Pilar 1 — sem locação paga, sem review).
+        One review per (rental, rater, scope); the rater is resolved
+        from the session.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewRequest"
+      responses:
+        "201":
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /users/{id}/reviews:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: scope
+        schema:
+          $ref: "#/components/schemas/ReviewScope"
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+    get:
+      operationId: ListUserReviews
+      tags: [reviews]
+      summary: List reviews addressed to a user (public)
+      description: |
+        Returns reviews where the given user is the ratee, optionally
+        filtered by scope. Public — no login required. Returns the
+        rater label as the stable platform pseudonym (DoD Pilar 3 —
+        PII default is pseudonymous).
+      responses:
+        "200":
+          description: Reviews addressed to the user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewPage"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{id}/review-aggregate:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: scope
+        required: true
+        schema:
+          $ref: "#/components/schemas/ReviewScope"
+    get:
+      operationId: GetUserReviewAggregate
+      tags: [reviews]
+      summary: Aggregate (count + avg) for a user on a scope (public)
+      description: |
+        Returns the materialized aggregate for the (user, scope) pair.
+        When the user has no reviews yet, the response is the zero
+        aggregate (count=0, sum=0, avg=0). Public — no login
+        required.
+      responses:
+        "200":
+          description: Aggregate for the (user, scope)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAggregate"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     cookieAuth:
@@ -2431,6 +2558,89 @@ components:
             service enforces the match server-side and rejects mismatches
             with 422 debt_amount_invalid; the handler is a thin
             pass-through.
+    ReviewScope:
+      type: string
+      enum: [listing, owner, operator, renter]
+    Review:
+      type: object
+      required: [id, rental_id, rater_user_id, scope, score, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rental_id:
+          type: string
+          format: uuid
+        rater_user_id:
+          type: string
+          format: uuid
+        ratee_user_id:
+          type: string
+          format: uuid
+          description: |
+            Account receiving the review. NULL/omitted when scope is
+            'listing' (the asset is rated, not a user).
+        scope:
+          $ref: "#/components/schemas/ReviewScope"
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 4096
+        created_at:
+          type: string
+          format: date-time
+    CreateReviewRequest:
+      type: object
+      required: [scope, score]
+      properties:
+        scope:
+          $ref: "#/components/schemas/ReviewScope"
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 4096
+          description: |
+            Optional free-text comment. The service strips control
+            characters and clamps to 4 KiB.
+    ReviewPage:
+      type: object
+      required: [reviews]
+      properties:
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+    ReviewAggregate:
+      type: object
+      required: [ratee_user_id, scope, count, sum, avg]
+      properties:
+        ratee_user_id:
+          type: string
+          format: uuid
+        scope:
+          $ref: "#/components/schemas/ReviewScope"
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+        sum:
+          type: integer
+          format: int64
+          minimum: 0
+        avg:
+          type: number
+          format: float
+          minimum: 0
+          description: |
+            Average score rounded to 2 decimal places. 0 when count=0
+            (the API surfaces this as "no reviews yet", not as 0.0
+            stars).
   responses:
     BadRequest:
       description: Bad request

@@ -212,6 +212,17 @@ func (wired) StaffResolveDamage(c *gin.Context, _ openapi_types.UUID) {
 func (wired) SettleDebt(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
 func (wired) ForgiveDebt(c *gin.Context, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
 
+// F6 review stubs (out of scope for auth tests).
+func (wired) CreateRentalReview(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) ListUserReviews(c *gin.Context, _ openapi_types.UUID, _ api.ListUserReviewsParams) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) GetUserReviewAggregate(c *gin.Context, _ openapi_types.UUID, _ api.GetUserReviewAggregateParams) {
+	c.Status(http.StatusNotFound)
+}
+
 func do(r http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

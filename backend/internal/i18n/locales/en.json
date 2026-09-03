@@ -70,5 +70,13 @@
   "f5.debt_invalid_state": "This action is not allowed for the current debt state.",
   "f5.debt_forgive_requires_reason": "Staff must provide a justification for any forgiveness.",
   "f5.debt_amount_invalid": "Debt amount is invalid.",
-  "f5.debt_cap_exceeded": "Forgiven amount would exceed the original debt."
+  "f5.debt_cap_exceeded": "Forgiven amount would exceed the original debt.",
+  "review.unauthorized": "Sign in to submit a review.",
+  "review.not_found": "Rental not found.",
+  "review.not_participant": "Only participants of this rental can review.",
+  "review.rental_not_terminal": "Reviews open after the rental closes. Wait for the return or damage to be resolved.",
+  "review.already_reviewed": "You have already reviewed this rental for this scope.",
+  "review.invalid_input": "Review data is invalid. Score must be 1..5.",
+  "review.scope_invalid": "Invalid scope. Use listing, owner, operator or renter.",
+  "review.self_review_forbidden": "You cannot review yourself."
 }
