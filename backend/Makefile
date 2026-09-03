@@ -3,7 +3,7 @@ SHELL := /bin/bash
 
 PKG      := ./...
 COVERAGE := coverage.out
-COVERPKG := ./internal/app/...,./internal/handler/...,./internal/i18n/...,./internal/platform/postgres/...,./internal/repository/...,./internal/auth/...,./internal/domain/account/...,./internal/domain/listing/...
+COVERPKG := ./internal/app/...,./internal/handler/...,./internal/i18n/...,./internal/platform/postgres/...,./internal/repository/...,./internal/auth/...,./internal/domain/account/...,./internal/domain/listing/...,./internal/domain/rental/...,./internal/payment/...,./internal/rental/...,./internal/repository/listing/...,./internal/repository/rental/...
 
 .PHONY: help tidy build test lint vuln oas i18n-audit
 
@@ -19,7 +19,7 @@ build: ## Compila o server em ./bin/server
 
 test: ## Testes com race + coverage (falha se < 80% nos pacotes COVERPKG)
 	GOTOOLCHAIN=local go test -race -coverprofile=$(COVERAGE) -covermode=atomic -coverpkg=$(COVERPKG) $(PKG)
-	@go tool cover -func=$(COVERAGE) | awk '/^total:/ {p=substr($$3,1,length($$3)-1)+0; if (p < 50) {print "FAIL: coverage "p"% < 50%"; exit 1} else {print "OK: coverage "p"% >= 50%"}}'
+	@go tool cover -func=$(COVERAGE) | awk '/^total:/ {p=substr($$3,1,length($$3)-1)+0; if (p < 80) {print "FAIL: coverage "p"% < 80%"; exit 1} else {print "OK: coverage "p"% >= 80%"}}'
 
 lint: ## golangci-lint v2
 	golangci-lint run --timeout=5m $(PKG)
