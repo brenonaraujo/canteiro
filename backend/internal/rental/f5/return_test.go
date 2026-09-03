@@ -32,9 +32,9 @@ func (f *fakeRental) Get(_ context.Context, id string) (rental.Rental, error) {
 func (f *fakeRental) put(r rental.Rental) { f.mu.Lock(); f.rentals[r.ID] = r; f.mu.Unlock() }
 
 type fakeReturn struct {
-	mu      sync.Mutex
-	byID    map[string]rental.Return
-	byRent  map[string]string
+	byID   map[string]rental.Return
+	byRent map[string]string
+	mu     sync.Mutex
 }
 
 func newFakeReturn() *fakeReturn {
@@ -107,7 +107,9 @@ func (fakeDamage) ListExpiring(context.Context, time.Time) ([]rental.DamageClaim
 type fakeDebt struct{}
 
 func (fakeDebt) Create(context.Context, rental.Debt) (rental.Debt, error) { return rental.Debt{}, nil }
-func (fakeDebt) GetByID(context.Context, string) (rental.Debt, error)     { return rental.Debt{}, rental.ErrF5DebtNotFound }
+func (fakeDebt) GetByID(context.Context, string) (rental.Debt, error) {
+	return rental.Debt{}, rental.ErrF5DebtNotFound
+}
 func (fakeDebt) GetByDamage(context.Context, string) (rental.Debt, bool, error) {
 	return rental.Debt{}, false, nil
 }
@@ -115,7 +117,7 @@ func (fakeDebt) UpdateState(context.Context, string, rental.DebtState, rental.De
 	return rental.Debt{}, nil
 }
 func (fakeDebt) ListOpenForRenter(context.Context, string) ([]rental.Debt, error) { return nil, nil }
-func (fakeDebt) ListDueBy(context.Context, time.Time) ([]rental.Debt, error)       { return nil, nil }
+func (fakeDebt) ListDueBy(context.Context, time.Time) ([]rental.Debt, error)      { return nil, nil }
 
 // fixedClock returns a fixed time for deterministic window tests.
 type fixedClock struct{ t time.Time }

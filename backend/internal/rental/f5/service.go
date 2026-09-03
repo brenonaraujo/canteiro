@@ -72,29 +72,13 @@ type DebtRepository interface {
 // not constants: defaults below are the SPEC values; callers can override
 // in tests (and a future F12 admin tool would override in production).
 type Config struct {
-	// OwnerClaimWindow is the time after the rental ends_at during which
-	// the owner can open a damage claim (AC-3: 48h).
-	OwnerClaimWindow time.Duration
-	// RenterDefenseWindow is the time after the claim is opened during
-	// which the renter can respond (AC-4: 48h).
-	RenterDefenseWindow time.Duration
-	// ReturnGraceAfterEnd is the time after ends_at during which neither
-	// party can register the return (AC-2: zero — the return is open
-	// immediately after ends_at, and the 48h window is for mutual
-	// confirmation). Default 0.
-	ReturnGraceAfterEnd time.Duration
-	// ReturnConfirmationWindow is the time after ends_at during which
-	// the return is in ReturnAwaitingConfirmation if not registered by
-	// both parties (AC-2: 48h).
+	Now                      Clock
+	IDGen                    IDGenerator
+	OwnerClaimWindow         time.Duration
+	RenterDefenseWindow      time.Duration
 	ReturnConfirmationWindow time.Duration
-	// DebtSettlementWindow is the time after the debt is created during
-	// which the renter can settle before the account is suspended for new
-	// reservations (AC-7: 5 days).
-	DebtSettlementWindow time.Duration
-	// IDGen and Now are injected for tests. Defaults are filled by
-	// Defaults() — see the constructor.
-	IDGen IDGenerator
-	Now   Clock
+	ReturnGraceAfterEnd      time.Duration
+	DebtSettlementWindow     time.Duration
 }
 
 // Defaults fills the zero-valued Config fields with the SPEC defaults.
@@ -124,11 +108,11 @@ func (c *Config) Defaults() {
 
 // Service orchestrates the F5 lifecycle.
 type Service struct {
-	cfg     Config
 	rentals RentalLookup
 	returns ReturnRepository
 	damage  DamageRepository
 	debts   DebtRepository
+	cfg     Config
 }
 
 // NewService wires the F5 service.

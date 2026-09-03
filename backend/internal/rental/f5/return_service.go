@@ -36,9 +36,9 @@ func (s *Service) RegisterPickup(ctx context.Context, rentalID string, ev rental
 		return rental.Return{}, fmt.Errorf("%w: marshal evidence: %v", rental.ErrInvalidInput, err)
 	}
 	ret, err := s.returns.Create(ctx, rental.Return{
-		ID:            s.cfg.IDGen.String(),
-		RentalID:      rentalID,
-		State:         rental.ReturnInProgress,
+		ID:             s.cfg.IDGen.String(),
+		RentalID:       rentalID,
+		State:          rental.ReturnInProgress,
 		PickupEvidence: evBytes,
 	})
 	if err != nil {

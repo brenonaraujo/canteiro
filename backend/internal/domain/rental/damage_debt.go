@@ -12,6 +12,7 @@ type DamageClaim struct {
 	DecidedAt *time.Time `json:"decided_at,omitempty"`
 	ResolvedAt *time.Time `json:"resolved_at,omitempty"`
 	OpenedAt  time.Time  `json:"opened_at"`
+	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	RespondedAt *time.Time `json:"responded_at,omitempty"`
 
