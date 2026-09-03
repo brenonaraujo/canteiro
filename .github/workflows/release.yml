@@ -58,7 +58,7 @@ jobs:
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
-      - name: Build and push image
+      - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -68,12 +68,28 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha_short }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             COMMIT=${{ steps.version.outputs.sha_short }}
             BUILD_DATE=${{ steps.version.outputs.build_date }}
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: web
+          file: web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:sha-${{ steps.version.outputs.sha_short }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            NUXT_PUBLIC_SITE_URL=https://canteiro.brenon.cloud
+            NUXT_PUBLIC_SITE_HOST=canteiro.brenon.cloud
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

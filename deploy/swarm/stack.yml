@@ -1,8 +1,16 @@
 version: "3.9"
+
+# Public origin: Cloudflare tunnel canteiro.brenon.cloud → 192.168.1.101:18083
+# (explicit hostname ABOVE wildcard *.brenon.cloud → haas-edge). Do not CNAME
+# this host to api.brenon.cloud. Kong /canteiro (key-auth) stays LAN-only.
+
 services:
   canteiro:
-    image: ghcr.io/brenonaraujo/canteiro:latest
+    image: ghcr.io/brenonaraujo/canteiro:${SERVICE_TAG:-latest}
     networks:
+      canteiro:
+        aliases:
+          - canteiro
       kong-apigateway_kong-net:
         aliases:
           - canteiro
@@ -38,8 +46,171 @@ services:
       restart_policy:
         condition: on-failure
 
+  web:
+    image: ghcr.io/brenonaraujo/canteiro-web:${SERVICE_TAG:-latest}
+    networks:
+      canteiro:
+        aliases:
+          - web
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3000"
+      NITRO_HOST: "0.0.0.0"
+      NITRO_PORT: "3000"
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits: { memory: 512M, cpus: "0.5" }
+      restart_policy:
+        condition: on-failure
+
+  edge:
+    image: nginx:1.27-alpine
+    depends_on:
+      - canteiro
+      - web
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        cat >/etc/nginx/proxy_params <<'P'
+        proxy_http_version 1.1;
+        proxy_set_header Host $$host;
+        proxy_set_header X-Real-IP $$remote_addr;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$http_x_forwarded_proto;
+        proxy_set_header Cookie $$http_cookie;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+        P
+        cat >/etc/nginx/conf.d/default.conf <<'NGX'
+        # SPA page GET /listings (catalog) vs API GET /listings (owner JSON).
+        # Browser navigation sends Sec-Fetch-Dest: document → HTML.
+        # curl / fetch omit it or send empty → API (DoD: /listings is JSON).
+        map $$http_sec_fetch_dest $$listings_upstream {
+            document http://web:3000;
+            iframe   http://web:3000;
+            default  http://canteiro:8080;
+        }
+
+        server {
+            listen 80;
+            server_name _;
+            client_max_body_size 8m;
+            resolver 127.0.0.11 ipv6=off valid=10s;
+            set $$canteiro_api http://canteiro:8080;
+            set $$canteiro_web http://web:3000;
+
+            location = /healthz {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location = /readyz {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location = /metrics {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+
+            location /catalog {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location /owner {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location /rentals {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location /payments {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location /damage {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location /debt {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location /users {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+
+            location /auth/google {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location = /auth/logout {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+
+            location = /account {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+            location = /account/deactivate {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_api;
+            }
+
+            location /listings {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$listings_upstream;
+            }
+
+            location / {
+                include /etc/nginx/proxy_params;
+                proxy_pass $$canteiro_web;
+            }
+        }
+        NGX
+        nginx -t
+        exec nginx -g "daemon off;"
+    networks:
+      canteiro:
+        aliases:
+          - edge
+    ports:
+      - target: 80
+        published: ${EDGE_PUBLISHED_PORT:-18083}
+        protocol: tcp
+        mode: ingress
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits: { memory: 64M, cpus: "0.25" }
+      restart_policy:
+        condition: on-failure
+
   postgres:
     image: postgres:18.4-alpine
+    networks:
+      - canteiro
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -62,6 +233,8 @@ services:
   migrate:
     image: migrate/migrate:v4.19.1
     restart: "no"
+    networks:
+      - canteiro
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,5 +257,6 @@ volumes:
   canteiro-postgres-data:
 
 networks:
+  canteiro:
   kong-apigateway_kong-net:
     external: true
