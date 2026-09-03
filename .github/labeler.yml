@@ -1,0 +1,38 @@
+# Path → canonical component labels only (AGENTS.md §4).
+# Never map path-scope:* or depends-on:* — those stay in issue/PR body.
+# sync-labels is false in the workflow so type/* and state labels are not stripped.
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - backend/**
+          - backend/go.mod
+          - backend/go.sum
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - web/**
+          - web/package.json
+          - web/pnpm-lock.yaml
+
+infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - deploy/**
+          - scripts/**
+          - docker-compose.yml
+          - docker-compose.yaml
+          - Dockerfile
+          - Dockerfile.*
+          - '**/Dockerfile'
+          - '**/Dockerfile.*'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - README.md
+          - harness/**
+          - '**/*.md'

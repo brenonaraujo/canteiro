@@ -1,0 +1,10 @@
+# Control-plane ownership (git-meta-harness).
+# Placeholder: repository owner. "Require review from Code Owners"
+# is a branch-protection setting, not this file.
+
+# Default owner
+* @brenonaraujo
+
+# Governance artifacts — harness, GitHub config, workflows
+/harness/ @brenonaraujo
+/.github/ @brenonaraujo
