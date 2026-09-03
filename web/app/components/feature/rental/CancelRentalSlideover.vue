@@ -77,7 +77,7 @@ function onSubmit() {
           :title="t(errorKey)"
         />
 
-        <footer class="mt-auto flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <footer class="mt-auto flex flex-col gap-4 sm:flex-row sm:justify-end">
           <UButton
             color="neutral"
             variant="ghost"

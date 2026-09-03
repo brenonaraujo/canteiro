@@ -91,7 +91,7 @@ const depositStatusLabel = computed(() => {
       <div
         v-for="row in rows"
         :key="row.key"
-        class="flex items-baseline justify-between gap-3"
+        class="flex items-baseline justify-between gap-4"
       >
         <dt class="text-sm text-muted">
           {{ row.label }}
@@ -104,14 +104,14 @@ const depositStatusLabel = computed(() => {
 
     <p
       v-if="!showDepositStatus"
-      class="rounded-md bg-elevated px-3 py-2 text-xs text-muted"
+      class="rounded-md bg-elevated px-4 py-2 text-xs text-muted"
     >
       {{ t('rental.totals.deposit_note') }}
     </p>
 
     <div
       v-else-if="depositStatusLabel"
-      class="flex items-center justify-between rounded-md bg-elevated px-3 py-2"
+      class="flex items-center justify-between rounded-md bg-elevated px-4 py-2"
     >
       <span class="text-xs text-muted">{{ t('rental.totals.deposit') }}</span>
       <span class="text-xs font-semibold text-highlighted">

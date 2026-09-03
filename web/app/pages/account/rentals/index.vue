@@ -71,7 +71,7 @@ function total(rental: Rental): string {
 
       <div
         v-else-if="items.length > 0"
-        class="flex flex-col gap-3"
+        class="flex flex-col gap-4"
       >
         <UCard
           v-for="rental in items"

@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { useRentalDetail } from '~/composables/rental/useRentalDetail'
 import { formatCents, formatRange } from '~/composables/rental/format'
-import {
-  isCancellableByTenant,
-  type Rental
-} from '~/composables/rental/types'
+import { isCancellableByTenant } from '~/composables/rental/state'
+import type { Rental } from '~/composables/rental/types'
 
 defineOptions({ name: 'AccountRentalDetailPage' })
 
@@ -190,7 +188,7 @@ function openReceipt() {
               }"
             />
 
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-4">
               <UButton
                 v-if="showCancelButton"
                 color="error"
@@ -242,7 +240,7 @@ function openReceipt() {
               <p class="text-sm text-muted">
                 {{ t('rental.receipt.subtitle') }}
               </p>
-              <p class="mt-3 text-sm font-medium text-highlighted tabular-nums">
+              <p class="mt-2 text-sm font-medium text-highlighted tabular-nums">
                 {{ formatCents(receipt.total_cents, locale) }}
               </p>
               <UButton

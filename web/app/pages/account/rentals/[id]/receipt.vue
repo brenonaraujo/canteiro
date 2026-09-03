@@ -5,7 +5,7 @@ import {
   formatRange,
   formatUtcDateTime
 } from '~/composables/rental/format'
-import { mapDepositStatus } from '~/composables/rental/types'
+import { mapDepositStatus } from '~/composables/rental/state'
 
 defineOptions({ name: 'AccountRentalReceiptPage' })
 
@@ -119,7 +119,7 @@ const feeLabel = computed(() => {
 
         <UCard>
           <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-4">
               <h2 class="text-base font-semibold text-highlighted">
                 {{ rental?.listing_snapshot.title ?? receipt.rental_id }}
               </h2>
@@ -130,8 +130,8 @@ const feeLabel = computed(() => {
             </div>
           </template>
 
-          <dl class="flex flex-col gap-3">
-            <div class="flex items-baseline justify-between gap-3">
+          <dl class="flex flex-col gap-4">
+            <div class="flex items-baseline justify-between gap-4">
               <dt class="text-sm text-muted">
                 {{ cancelledByLabel }}
               </dt>
@@ -139,7 +139,7 @@ const feeLabel = computed(() => {
                 {{ cancelledAtLabel }}
               </dd>
             </div>
-            <div class="flex items-baseline justify-between gap-3">
+            <div class="flex items-baseline justify-between gap-4">
               <dt class="text-sm text-muted">
                 {{ t('rental.receipt.window_label') }}
               </dt>
@@ -147,7 +147,7 @@ const feeLabel = computed(() => {
                 {{ receipt.window_applied }}
               </dd>
             </div>
-            <div class="flex items-baseline justify-between gap-3">
+            <div class="flex items-baseline justify-between gap-4">
               <dt class="text-sm text-muted">
                 {{ t('rental.detail.summary.rental_window') }}
               </dt>
@@ -155,7 +155,7 @@ const feeLabel = computed(() => {
                 {{ range }}
               </dd>
             </div>
-            <div class="flex items-baseline justify-between gap-3">
+            <div class="flex items-baseline justify-between gap-4">
               <dt class="text-sm text-muted">
                 {{ t('rental.receipt.issued_at') }}
               </dt>
@@ -163,7 +163,7 @@ const feeLabel = computed(() => {
                 {{ issuedAtLabel }}
               </dd>
             </div>
-            <div class="flex items-baseline justify-between gap-3">
+            <div class="flex items-baseline justify-between gap-4">
               <dt class="text-sm text-muted">
                 {{ t('rental.receipt.processor_ref') }}
               </dt>
