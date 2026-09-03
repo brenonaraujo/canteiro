@@ -71,5 +71,13 @@
   "f5.debt_invalid_state": "Esta ação não é permitida para o estado atual da dívida.",
   "f5.debt_forgive_requires_reason": "O staff deve informar uma justificativa para qualquer perdão.",
   "f5.debt_amount_invalid": "Valor da dívida inválido.",
-  "f5.debt_cap_exceeded": "Valor perdoado excederia o total original da dívida."
+  "f5.debt_cap_exceeded": "Valor perdoado excederia o total original da dívida.",
+  "review.unauthorized": "Entre para enviar uma avaliação.",
+  "review.not_found": "Locação não encontrada.",
+  "review.not_participant": "Apenas participantes desta locação podem avaliar.",
+  "review.rental_not_terminal": "Avaliações abrem após a locação ser encerrada. Aguarde a devolução ou a resolução da avaria.",
+  "review.already_reviewed": "Você já avaliou esta locação neste escopo.",
+  "review.invalid_input": "Dados da avaliação inválidos. A nota deve ser 1..5.",
+  "review.scope_invalid": "Escopo inválido. Use listing, owner, operator ou renter.",
+  "review.self_review_forbidden": "Você não pode avaliar a si mesmo."
 }

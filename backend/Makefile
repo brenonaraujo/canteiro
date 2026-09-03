@@ -9,7 +9,7 @@ COVERAGE := coverage.out
 #   - ./internal/repository/rental  → rentalpg.go: depende de DATABASE_URL real.
 #   - ./internal/repository/listing → listingpg.go: depende de DATABASE_URL real.
 # Decisão ADR-0021.
-COVERPKG := ./internal/app/...,./internal/handler/...,./internal/i18n/...,./internal/auth/...,./internal/domain/account/...,./internal/domain/listing/...,./internal/domain/rental/...,./internal/payment/...,./internal/rental/...
+COVERPKG := ./internal/app/...,./internal/handler/...,./internal/i18n/...,./internal/auth/...,./internal/domain/account/...,./internal/domain/listing/...,./internal/domain/rental/...,./internal/domain/review/...,./internal/payment/...,./internal/rental/...,./cmd/server/review_lookup_adapter.go
 
 .PHONY: help tidy build test lint vuln oas i18n-audit
 

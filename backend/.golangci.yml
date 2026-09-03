@@ -78,6 +78,28 @@ linters:
         linters:
           - govet
         text: "fieldalignment"
+      # F6 review surface: pointer ordering is for legibility, not
+      # byte-packing; fieldalignment warnings are intentionally waived.
+      - path: internal/domain/review/review\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/domain/review/service\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/domain/review/service_test\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/handler/review_test\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/repository/review/reviewpg\.go
+        linters:
+          - govet
+        text: "fieldalignment"
 
 formatters:
   enable:

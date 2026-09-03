@@ -14,6 +14,7 @@ import (
 	"github.com/brenonaraujo/canteiro/backend/internal/app"
 	"github.com/brenonaraujo/canteiro/backend/internal/domain/listing"
 	"github.com/brenonaraujo/canteiro/backend/internal/domain/rental"
+	"github.com/brenonaraujo/canteiro/backend/internal/domain/review"
 	"github.com/brenonaraujo/canteiro/backend/internal/handler"
 	"github.com/brenonaraujo/canteiro/backend/internal/payment"
 	"github.com/brenonaraujo/canteiro/backend/internal/platform/postgres"
@@ -23,6 +24,8 @@ import (
 	f5pg "github.com/brenonaraujo/canteiro/backend/internal/repository/f5"
 	listingpg "github.com/brenonaraujo/canteiro/backend/internal/repository/listing"
 	rentalpg "github.com/brenonaraujo/canteiro/backend/internal/repository/rental"
+	reviewpg "github.com/brenonaraujo/canteiro/backend/internal/repository/review"
+	lookuppgrental "github.com/brenonaraujo/canteiro/backend/internal/repository/review/lookuppgrental"
 )
 
 func run(ctx context.Context, cfg *app.Config, logger *slog.Logger) {
@@ -68,6 +71,14 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker,
 	// depends on rentalSvc for rental lookup.
 	rentalSvc.SetDebtGate(f5Svc)
 	f5API := handler.NewF5API(f5Svc, f5Svc, f5Svc, authAPI.CurrentAccountID)
+	// F6: review domain. The repository is Postgres-backed; the
+	// rental lookup is a thin adapter over rental.Service.Get + a
+	// direct SQL probe for the F5-terminal state (devolução closed
+	// OR avaria resolved).
+	reviewRepo := reviewpg.New(db)
+	reviewRentalLookup := lookuppgrental.New(db, &reviewRentalLookupAdapter{svc: rentalSvc})
+	reviewSvc := review.NewService(review.Config{}, reviewRentalLookup, reviewRepo)
+	reviewAPI := handler.NewReviewAPI(reviewSvc, authAPI.CurrentAccountID)
 	return app.NewRouter(app.ServerOpts{
 		ServiceName: cfg.ServiceName,
 		MetricsPath: cfg.MetricsPath,
@@ -79,6 +90,7 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker,
 		Rental:      rentalAPI,
 		Payment:     paymentAPI,
 		F5:          f5API,
+		Review:      reviewAPI,
 		CORSOrigin:  cfg.WebAppURL,
 	})
 }
