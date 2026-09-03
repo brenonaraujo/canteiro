@@ -20,8 +20,8 @@ import (
 )
 
 type paySvcFake struct {
-	called bool
 	err    error
+	called bool
 }
 
 func (p *paySvcFake) HandleWebhookEvent(_ context.Context, _ rentsvc.ProviderWebhookEvent) error {
@@ -30,8 +30,8 @@ func (p *paySvcFake) HandleWebhookEvent(_ context.Context, _ rentsvc.ProviderWeb
 }
 
 type payVerifyFake struct {
-	verified rentsvc.ProviderWebhookEvent
 	err      error
+	verified rentsvc.ProviderWebhookEvent
 }
 
 func (v *payVerifyFake) VerifyWebhookSignature(_ context.Context, _ []byte, _ string) (rentsvc.ProviderWebhookEvent, error) {
@@ -60,7 +60,7 @@ func (paymentServer) Logout(*gin.Context)                                { panic
 func (paymentServer) Healthz(*gin.Context)                               { panic("unused") }
 func (paymentServer) Readyz(*gin.Context)                                { panic("unused") }
 func (paymentServer) ListMineListings(*gin.Context)                      { panic("unused") }
-func (paymentServer) CreateListingDraft(*gin.Context)                   { panic("unused") }
+func (paymentServer) CreateListingDraft(*gin.Context)                    { panic("unused") }
 func (paymentServer) GetMyListing(*gin.Context, openapiUUID)             { panic("unused") }
 func (paymentServer) UpdateListing(*gin.Context, openapiUUID)            { panic("unused") }
 func (paymentServer) PublishListing(*gin.Context, openapiUUID)           { panic("unused") }
@@ -68,9 +68,9 @@ func (paymentServer) PauseListing(*gin.Context, openapiUUID)             { panic
 func (paymentServer) ListBlocks(*gin.Context, openapiUUID)               { panic("unused") }
 func (paymentServer) AddBlock(*gin.Context, openapiUUID)                 { panic("unused") }
 func (paymentServer) RemoveBlock(*gin.Context, openapiUUID, openapiUUID) { panic("unused") }
-func (paymentServer) GetOwnerOnboarding(*gin.Context)                   { panic("unused") }
+func (paymentServer) GetOwnerOnboarding(*gin.Context)                    { panic("unused") }
 func (paymentServer) UpdateOwnerOnboarding(*gin.Context)                 { panic("unused") }
-func (paymentServer) ListCategories(*gin.Context)                       { panic("unused") }
+func (paymentServer) ListCategories(*gin.Context)                        { panic("unused") }
 func (paymentServer) SearchCatalog(*gin.Context, api.SearchCatalogParams) {
 	panic("unused")
 }
@@ -78,14 +78,14 @@ func (paymentServer) GetPublicListing(*gin.Context, openapiUUID) { panic("unused
 func (paymentServer) GetPublicCalendar(*gin.Context, openapiUUID, api.GetPublicCalendarParams) {
 	panic("unused")
 }
-func (paymentServer) CreateRental(*gin.Context)                     { panic("unused") }
-func (paymentServer) ListMyRentals(*gin.Context)                    { panic("unused") }
-func (paymentServer) GetRental(*gin.Context, openapiUUID)           { panic("unused") }
+func (paymentServer) CreateRental(*gin.Context)                        { panic("unused") }
+func (paymentServer) ListMyRentals(*gin.Context)                       { panic("unused") }
+func (paymentServer) GetRental(*gin.Context, openapiUUID)              { panic("unused") }
 func (paymentServer) AuthorizeRentalPayment(*gin.Context, openapiUUID) { panic("unused") }
-func (paymentServer) AcceptRental(*gin.Context, openapiUUID)        { panic("unused") }
-func (paymentServer) DeclineRental(*gin.Context, openapiUUID)       { panic("unused") }
-func (paymentServer) CancelRental(*gin.Context, openapiUUID)        { panic("unused") }
-func (paymentServer) GetRentalReceipt(*gin.Context, openapiUUID)    { panic("unused") }
+func (paymentServer) AcceptRental(*gin.Context, openapiUUID)           { panic("unused") }
+func (paymentServer) DeclineRental(*gin.Context, openapiUUID)          { panic("unused") }
+func (paymentServer) CancelRental(*gin.Context, openapiUUID)           { panic("unused") }
+func (paymentServer) GetRentalReceipt(*gin.Context, openapiUUID)       { panic("unused") }
 
 func (s paymentServer) PaymentWebhook(c *gin.Context, p api.PaymentWebhookParams) {
 	s.api.PaymentWebhook(c, p)

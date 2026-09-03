@@ -160,15 +160,15 @@ func TestRental_IsOwnerAndIsTenant(t *testing.T) {
 func rentalStub() *Rental {
 	start := time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC)
 	return &Rental{
-		ID:                    "rental-1",
-		ListingID:             "listing-1",
-		TenantAccountID:       "tenant-1",
-		RentCents:             1000,
-		OperatorCents:         0,
-		DepositCents:          5000,
-		StartsAt:              start,
-		EndsAt:                start.Add(2 * time.Hour),
-		State:                 StatePending,
+		ID:              "rental-1",
+		ListingID:       "listing-1",
+		TenantAccountID: "tenant-1",
+		RentCents:       1000,
+		OperatorCents:   0,
+		DepositCents:    5000,
+		StartsAt:        start,
+		EndsAt:          start.Add(2 * time.Hour),
+		State:           StatePending,
 		ListingSnapshot: ListingSnapshot{
 			OwnerID:  "owner-1",
 			Title:    "Furadeira",

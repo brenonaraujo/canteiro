@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -27,10 +26,11 @@ import (
 // --- fakes --------------------------------------------------------------
 
 type rentSvcFake struct {
-	mu              sync.Mutex
 	rentals         map[string]rental.Rental
 	intents         map[string]rentsvc.PaymentIntent
 	receipts        map[string]rental.Receipt
+	createErr       error
+	mu              sync.Mutex
 	createCalls     int
 	listTenantCalls int
 	acceptCalls     int
@@ -38,7 +38,6 @@ type rentSvcFake struct {
 	cancelCalls     int
 	authCalls       int
 	getReceiptCalls int
-	createErr       error
 }
 
 func newRentSvcFake() *rentSvcFake {
@@ -69,15 +68,15 @@ func (f *rentSvcFake) CreateIntent(_ context.Context, in rentsvc.CreateIntentInp
 		WithOperator:          in.WithOperator,
 		OperatorTermsAccepted: in.OperatorTermsAccepted,
 		ListingSnapshot: rental.ListingSnapshot{
-			OwnerID:           "owner-x",
-			Title:             "Furadeira",
-			Category:          "electric",
-			PriceUnit:         "hour",
-			PriceAmountCents:  5000,
-			DepositCents:      20000,
-			MinLeadTimeHours:  12,
-			PickupCity:        "São Paulo",
-			Operator:          rental.OperatorSnapshot{Mode: "none"},
+			OwnerID:          "owner-x",
+			Title:            "Furadeira",
+			Category:         "electric",
+			PriceUnit:        "hour",
+			PriceAmountCents: 5000,
+			DepositCents:     20000,
+			MinLeadTimeHours: 12,
+			PickupCity:       "São Paulo",
+			Operator:         rental.OperatorSnapshot{Mode: "none"},
 		},
 		RentCents:           10000,
 		OperatorCents:       0,
@@ -255,17 +254,17 @@ func (rentalServer) Logout(*gin.Context)                                 { panic
 func (rentalServer) Healthz(*gin.Context)                                { panic("unused") }
 func (rentalServer) Readyz(*gin.Context)                                 { panic("unused") }
 func (rentalServer) ListMineListings(*gin.Context)                       { panic("unused") }
-func (rentalServer) CreateListingDraft(*gin.Context)                    { panic("unused") }
-func (rentalServer) GetMyListing(*gin.Context, openapiUUID)             { panic("unused") }
-func (rentalServer) UpdateListing(*gin.Context, openapiUUID)            { panic("unused") }
+func (rentalServer) CreateListingDraft(*gin.Context)                     { panic("unused") }
+func (rentalServer) GetMyListing(*gin.Context, openapiUUID)              { panic("unused") }
+func (rentalServer) UpdateListing(*gin.Context, openapiUUID)             { panic("unused") }
 func (rentalServer) PublishListing(*gin.Context, openapiUUID)            { panic("unused") }
 func (rentalServer) PauseListing(*gin.Context, openapiUUID)              { panic("unused") }
 func (rentalServer) ListBlocks(*gin.Context, openapiUUID)                { panic("unused") }
 func (rentalServer) AddBlock(*gin.Context, openapiUUID)                  { panic("unused") }
 func (rentalServer) RemoveBlock(*gin.Context, openapiUUID, openapiUUID)  { panic("unused") }
-func (rentalServer) GetOwnerOnboarding(*gin.Context)                    { panic("unused") }
+func (rentalServer) GetOwnerOnboarding(*gin.Context)                     { panic("unused") }
 func (rentalServer) UpdateOwnerOnboarding(*gin.Context)                  { panic("unused") }
-func (rentalServer) ListCategories(*gin.Context)                        { panic("unused") }
+func (rentalServer) ListCategories(*gin.Context)                         { panic("unused") }
 func (rentalServer) SearchCatalog(*gin.Context, api.SearchCatalogParams) { panic("unused") }
 func (rentalServer) GetPublicListing(*gin.Context, openapiUUID)          { panic("unused") }
 func (rentalServer) GetPublicCalendar(*gin.Context, openapiUUID, api.GetPublicCalendarParams) {
@@ -273,8 +272,8 @@ func (rentalServer) GetPublicCalendar(*gin.Context, openapiUUID, api.GetPublicCa
 }
 func (rentalServer) PaymentWebhook(*gin.Context, api.PaymentWebhookParams) { panic("unused") }
 
-func (s rentalServer) CreateRental(c *gin.Context)   { s.api.CreateRental(c) }
-func (s rentalServer) ListMyRentals(c *gin.Context)  { s.api.ListMyRentals(c) }
+func (s rentalServer) CreateRental(c *gin.Context)  { s.api.CreateRental(c) }
+func (s rentalServer) ListMyRentals(c *gin.Context) { s.api.ListMyRentals(c) }
 func (s rentalServer) GetRental(c *gin.Context, id openapiUUID) {
 	s.api.GetRental(c, id)
 }
@@ -295,10 +294,6 @@ func (s rentalServer) GetRentalReceipt(c *gin.Context, id openapiUUID) {
 }
 
 // --- tests --------------------------------------------------------------
-
-func intToStr(i int) string {
-	return strconv.Itoa(i)
-}
 
 func TestCreateRental_HappyPath(t *testing.T) {
 	r := newRentalRouter(t, "tenant-1")
@@ -579,7 +574,7 @@ func TestRental_ErrorBranches(t *testing.T) {
 
 	// Seed a rental so the Get path doesn't bail at ErrNotFound before writeServiceErr.
 	id := uuid.NewString()
-	svc.rentSvcFake.rentals[id] = rental.Rental{ID: id, ListingID: "L", TenantAccountID: "tenant-1", State: rental.StatePending}
+	svc.rentals[id] = rental.Rental{ID: id, ListingID: "L", TenantAccountID: "tenant-1", State: rental.StatePending}
 
 	cases := []struct {
 		method, path string
@@ -619,16 +614,16 @@ func TestRental_WriteServiceErrAllBranches(t *testing.T) {
 	body := `{"listing_id":"11111111-1111-4111-8111-111111111111","starts_at":"2026-10-10T10:00:00Z","ends_at":"2026-10-10T12:00:00Z"}`
 	cases := []struct {
 		err        error
-		wantStatus int
 		wantCode   string
+		wantStatus int
 	}{
-		{rental.ErrInvalidInput, http.StatusUnprocessableEntity, "invalid_input"},
-		{rental.ErrOperatorTermsRequired, http.StatusUnprocessableEntity, "operator_terms_required"},
-		{rental.ErrOperatorNotAvailable, http.StatusUnprocessableEntity, "operator_not_available"},
-		{rental.ErrProfileIncomplete, http.StatusForbidden, "profile_incomplete"},
-		{rental.ErrListingUnavailable, http.StatusConflict, "listing_unavailable"},
-		{rental.ErrPaymentTotalMismatch, http.StatusUnprocessableEntity, "payment_mismatch"},
-		{errors.New("other"), http.StatusInternalServerError, "internal_error"},
+		{err: rental.ErrInvalidInput, wantCode: "invalid_input", wantStatus: http.StatusUnprocessableEntity},
+		{err: rental.ErrOperatorTermsRequired, wantCode: "operator_terms_required", wantStatus: http.StatusUnprocessableEntity},
+		{err: rental.ErrOperatorNotAvailable, wantCode: "operator_not_available", wantStatus: http.StatusUnprocessableEntity},
+		{err: rental.ErrProfileIncomplete, wantCode: "profile_incomplete", wantStatus: http.StatusForbidden},
+		{err: rental.ErrListingUnavailable, wantCode: "listing_unavailable", wantStatus: http.StatusConflict},
+		{err: rental.ErrPaymentTotalMismatch, wantCode: "payment_mismatch", wantStatus: http.StatusUnprocessableEntity},
+		{err: errors.New("other"), wantCode: "internal_error", wantStatus: http.StatusInternalServerError},
 	}
 	for _, tc := range cases {
 		base := newRentSvcFake()

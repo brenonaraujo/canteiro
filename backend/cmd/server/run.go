@@ -16,10 +16,10 @@ import (
 	"github.com/brenonaraujo/canteiro/backend/internal/handler"
 	"github.com/brenonaraujo/canteiro/backend/internal/payment"
 	"github.com/brenonaraujo/canteiro/backend/internal/platform/postgres"
+	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
 	"github.com/brenonaraujo/canteiro/backend/internal/repository"
 	listingpg "github.com/brenonaraujo/canteiro/backend/internal/repository/listing"
 	rentalpg "github.com/brenonaraujo/canteiro/backend/internal/repository/rental"
-	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
 )
 
 func run(ctx context.Context, cfg *app.Config, logger *slog.Logger) {

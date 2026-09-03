@@ -67,7 +67,7 @@ func TestSanitizeKey_HandlesUnicodeAndPunctuation(t *testing.T) {
 
 func TestSanitizeKey_Empty(t *testing.T) {
 	t.Parallel()
-	require.Equal(t, "", sanitizeKey(""))
+	require.Empty(t, sanitizeKey(""))
 }
 
 func TestStripe_NewStripe_StoresFields(t *testing.T) {

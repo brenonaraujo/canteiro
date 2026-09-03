@@ -26,20 +26,20 @@ func TestToRentalSnapshot_RoundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC)
 	r := rental.Rental{
-		ID:                    "rental-1",
-		ListingID:             "listing-1",
-		TenantAccountID:       "tenant-1",
-		RentCents:             10000,
-		OperatorCents:         2000,
-		DepositCents:          50000,
-		CommissionCents:       1440,
-		OwnerPayoutCents:      10560,
-		StartsAt:              now,
-		EndsAt:                now.Add(2 * time.Hour),
-		State:                 rental.StatePending,
-		IntentKey:             "ik-1",
-		CreatedAt:             now,
-		UpdatedAt:             now,
+		ID:               "rental-1",
+		ListingID:        "listing-1",
+		TenantAccountID:  "tenant-1",
+		State:            rental.StatePending,
+		IntentKey:        "ik-1",
+		StartsAt:         now,
+		EndsAt:           now.Add(2 * time.Hour),
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		RentCents:        10000,
+		OperatorCents:    2000,
+		DepositCents:     50000,
+		CommissionCents:  1440,
+		OwnerPayoutCents: 10560,
 		ListingSnapshot: rental.ListingSnapshot{
 			OwnerID:          "owner-1",
 			Title:            "Furadeira Bosch",
@@ -60,6 +60,9 @@ func TestToRentalSnapshot_RoundTrip(t *testing.T) {
 			HeavyLegalCession: true,
 		},
 	}
+	require.Equal(t, "rental-1", r.ID)
+	require.Equal(t, int64(10000), r.RentCents)
+	require.Equal(t, rental.StatePending, r.State)
 	bytes, err := rental.MarshalSnapshot(r.ListingSnapshot)
 	require.NoError(t, err)
 	restored, err := rental.UnmarshalSnapshot(bytes)
@@ -80,9 +83,12 @@ func TestPaymentIntentKey_FormatStable(t *testing.T) {
 	t.Parallel()
 	// The repo persists intent_key as the deterministic dedup key.
 	intent := rentsvc.PaymentIntent{
-		ID: "pi-1", RentalID: "rental-1", Provider: "noop",
+		ID:             "pi-1",
+		RentalID:       "rental-1",
+		Provider:       "noop",
 		IdempotencyKey: "rental-rental-1-attempt-1",
 	}
+	require.Equal(t, "pi-1", intent.ID)
 	require.NotEmpty(t, intent.IdempotencyKey)
 }
 
