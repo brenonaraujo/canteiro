@@ -18,17 +18,17 @@ import (
 func baseRental() rental.Rental {
 	now := time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC)
 	return rental.Rental{
-		ID:              "r1",
-		ListingID:       "L1",
-		TenantAccountID: "T1",
-		State:           rental.StateAuthorized,
-		StartsAt:        now.Add(48 * time.Hour), // 48h ahead of pickup
-		EndsAt:          now.Add(72 * time.Hour),
-		RentCents:       10000,
-		OperatorCents:   0,
-		DepositCents:    20000,
-		CommissionCents: 1200, // 12% over rent (no operator)
-		OwnerPayoutCents: 8800,
+		ID:                  "r1",
+		ListingID:           "L1",
+		TenantAccountID:     "T1",
+		State:               rental.StateAuthorized,
+		StartsAt:            now.Add(48 * time.Hour), // 48h ahead of pickup
+		EndsAt:              now.Add(72 * time.Hour),
+		RentCents:           10000,
+		OperatorCents:       0,
+		DepositCents:        20000,
+		CommissionCents:     1200, // 12% over rent (no operator)
+		OwnerPayoutCents:    8800,
 		OperatorPayoutCents: 0,
 		ListingSnapshot: rental.ListingSnapshot{
 			OwnerID:  "O1",
@@ -56,15 +56,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorTenant, AccountID: "T1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowTenantPreAccept,
-				ActorKind:          rental.ActorTenant,
+				WindowCode:           rental.WindowTenantPreAccept,
+				ActorKind:            rental.ActorTenant,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  10000,
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1200,
+				TenantRefundCents:    10000,
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -75,15 +75,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorTenant, AccountID: "T1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowTenantGe24h,
-				ActorKind:          rental.ActorTenant,
+				WindowCode:           rental.WindowTenantGe24h,
+				ActorKind:            rental.ActorTenant,
 				CancellationFeeCents: 1000,
-				TenantRefundCents:  9000,
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1200,
+				TenantRefundCents:    9000,
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -95,15 +95,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorTenant, AccountID: "T1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowTenantLt24h,
-				ActorKind:          rental.ActorTenant,
+				WindowCode:           rental.WindowTenantLt24h,
+				ActorKind:            rental.ActorTenant,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  0,
-				OwnerPayoutCents:   8800, // owner keeps (rent - 12% commission)
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1200,
+				TenantRefundCents:    0,
+				OwnerPayoutCents:     8800, // owner keeps (rent - 12% commission)
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -116,14 +116,14 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorTenant, AccountID: "T1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowTenantAfterStart,
-				ActorKind:          rental.ActorTenant,
+				WindowCode:           rental.WindowTenantAfterStart,
+				ActorKind:            rental.ActorTenant,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  0,
-				OwnerPayoutCents:   8800, // full rent retained (after_start: 100% elapsed)
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositHeld,
-				CommissionCents:    1200,
+				TenantRefundCents:    0,
+				OwnerPayoutCents:     8800, // full rent retained (after_start: 100% elapsed)
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositHeld,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -134,15 +134,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorOwner, AccountID: "O1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowOwnerPrePickup,
-				ActorKind:          rental.ActorOwner,
+				WindowCode:           rental.WindowOwnerPrePickup,
+				ActorKind:            rental.ActorOwner,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  10000,
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1200,
+				TenantRefundCents:    10000,
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -161,15 +161,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorOwner, AccountID: "O1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowOwnerPrePickup,
-				ActorKind:          rental.ActorOwner,
+				WindowCode:           rental.WindowOwnerPrePickup,
+				ActorKind:            rental.ActorOwner,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  16000, // rent + operator
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1920,
+				TenantRefundCents:    16000, // rent + operator
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1920,
 			},
 		},
 		{
@@ -182,14 +182,14 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorOwner, AccountID: "O1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowOwnerAfterStart,
-				ActorKind:          rental.ActorOwner,
+				WindowCode:           rental.WindowOwnerAfterStart,
+				ActorKind:            rental.ActorOwner,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  10000,
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositHeld,
-				CommissionCents:    1200,
+				TenantRefundCents:    10000,
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositHeld,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -200,15 +200,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorOperator, AccountID: "OP1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowOwnerPrePickup,
-				ActorKind:          rental.ActorOperator,
+				WindowCode:           rental.WindowOwnerPrePickup,
+				ActorKind:            rental.ActorOperator,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  10000,
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1200,
+				TenantRefundCents:    10000,
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -227,15 +227,15 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorTenant, AccountID: "T1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowTenantGe24h, // 48h to pickup → ge24h
-				ActorKind:          rental.ActorTenant,
+				WindowCode:           rental.WindowTenantGe24h, // 48h to pickup → ge24h
+				ActorKind:            rental.ActorTenant,
 				CancellationFeeCents: 1000, // 10% of rent 10000
-				TenantRefundCents:  9000,
-				OwnerPayoutCents:   0,
-				OperatorPayoutCents: 0,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1680,
+				TenantRefundCents:    9000,
+				OwnerPayoutCents:     0,
+				OperatorPayoutCents:  0,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1680,
 			},
 		},
 		{
@@ -247,14 +247,14 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 			actor: rental.CancellationActor{Kind: rental.ActorTenant, AccountID: "T1"},
 			now:   time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
 			want: rental.CancellationDecision{
-				WindowCode:         rental.WindowTenantLt24h,
-				ActorKind:          rental.ActorTenant,
+				WindowCode:           rental.WindowTenantLt24h,
+				ActorKind:            rental.ActorTenant,
 				CancellationFeeCents: 0,
-				TenantRefundCents:  0,
-				OwnerPayoutCents:   8800,
-				DepositState:       rental.DepositReleased,
-				DepositReleaseCents: 20000,
-				CommissionCents:    1200,
+				TenantRefundCents:    0,
+				OwnerPayoutCents:     8800,
+				DepositState:         rental.DepositReleased,
+				DepositReleaseCents:  20000,
+				CommissionCents:      1200,
 			},
 		},
 		{
@@ -286,11 +286,11 @@ func TestClassifyCancellation_TableDriven(t *testing.T) {
 				tt.mutate(&r)
 			}
 			d, err := rental.ClassifyCancellation(rental.CancellationInput{
-				Rental:  r,
-				Actor:   tt.actor,
-				Now:     tt.now,
-				FeeBPS:  1000,
-				WindowH: 24,
+				Rental:           r,
+				Actor:            tt.actor,
+				Now:              tt.now,
+				FeeBPS:           1000,
+				WindowH:          24,
 				MinFractionHours: 4,
 			})
 			if tt.wantErr != nil {
@@ -321,10 +321,10 @@ func TestClassifyCancellation_AC9_CommissionExcludesDeposit(t *testing.T) {
 	r.CommissionCents = rental.ApplyCommissionBPS(r.RentCents+r.OperatorCents, 1200)
 	r.OwnerPayoutCents = r.RentCents + r.OperatorCents - r.CommissionCents
 	d, err := rental.ClassifyCancellation(rental.CancellationInput{
-		Rental: r,
-		Actor:  rental.CancellationActor{Kind: rental.ActorOwner, AccountID: "O1"},
-		Now:    time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
-		FeeBPS: 1000,
+		Rental:  r,
+		Actor:   rental.CancellationActor{Kind: rental.ActorOwner, AccountID: "O1"},
+		Now:     time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
+		FeeBPS:  1000,
 		WindowH: 24,
 	})
 	require.NoError(t, err)
@@ -358,11 +358,11 @@ func TestClassifyCancellation_ChargebackReversal_EC5(t *testing.T) {
 	r := baseRental()
 	r.State = rental.StateConfirmed
 	d, err := rental.ClassifyCancellation(rental.CancellationInput{
-		Rental:              r,
-		Actor:               rental.CancellationActor{Kind: rental.ActorPlatform, AccountID: "platform", Reason: "chargeback"},
-		Now:                 time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
-		FeeBPS:              0,
-		WindowH:             24,
+		Rental:               r,
+		Actor:                rental.CancellationActor{Kind: rental.ActorPlatform, AccountID: "platform", Reason: "chargeback"},
+		Now:                  time.Date(2026, 10, 10, 8, 0, 0, 0, time.UTC),
+		FeeBPS:               0,
+		WindowH:              24,
 		IsChargebackReversal: true,
 	})
 	require.NoError(t, err)

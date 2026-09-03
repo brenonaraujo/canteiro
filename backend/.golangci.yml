@@ -56,6 +56,28 @@ linters:
       - path: internal/api/openapi\.gen\.go
         linters:
           - all
+      # F4 cancellation fields are sized for legibility, not byte-packing;
+      # fieldalignment warnings on the F4 surface are intentionally waived.
+      - path: internal/domain/rental/cancellation\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/domain/rental/cancellation_test\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/rental/service\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/rental/cancel_test\.go
+        linters:
+          - govet
+        text: "fieldalignment"
+      - path: internal/repository/rental/rentalpg\.go
+        linters:
+          - govet
+        text: "fieldalignment"
 
 formatters:
   enable:

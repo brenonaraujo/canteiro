@@ -74,32 +74,28 @@ type WebhookEvent struct {
 // CancellationRecord is the immutable, audit-ready F4 record persisted
 // per rental. The row is created once and never updated (ADR-lite #2);
 // a correction is a new event referencing the original.
+//
+//nolint:fieldalignment // F4 surface has many int64 fields; the optimal ordering is not stable across govet releases.
 type CancellationRecord struct {
 	IssuedAt time.Time
 
-	ID        string
-	RentalID  string
-	ActorID   string
-	ActorKind rental.ActorKind
-
-	WindowCode rental.WindowCode
-
-	// Split per part — what the platform keeps vs what each side gets.
-	CancellationFeeCents              int64
-	TenantRefundCents                 int64
-	OwnerPayoutCentsAfterCancellation int64
+	TenantRefundCents                    int64
+	OwnerPayoutCentsAfterCancellation    int64
 	OperatorPayoutCentsAfterCancellation int64
-	CommissionCents                   int64
+	CancellationFeeCents                 int64
+	CommissionCents                      int64
+	DepositCaptureCents                  int64
+	DepositReleaseCents                  int64
+	DepositPartialCaptureCents           int64
 
-	// Deposit state at the moment of cancellation.
-	DepositState                 rental.DepositState
-	DepositCaptureCents          int64
-	DepositReleaseCents          int64
-	DepositPartialCaptureCents   int64
-
-	// PSP-side operation id when the trigger is a webhook.
+	ID                   string
+	RentalID             string
+	ActorID              string
 	ProcessorOperationID string
 	ReversalReason       string
+	ActorKind            rental.ActorKind
+	WindowCode           rental.WindowCode
+	DepositState         rental.DepositState
 }
 
 // ToReceiptFields copies the F4 AC-11 fields onto a Receipt. The receipt
@@ -114,13 +110,13 @@ func (c CancellationRecord) ToReceiptFields() (rental.ActorKind, rental.WindowCo
 
 // CancelInput is the input to the F4 cancellation use case.
 type CancelInput struct {
-	CallerAccountID string
-	RentalID        string
-	ActorKind       rental.ActorKind
-	Reason          string
-	ProcessorOpID  string  // set when the trigger is a webhook
+	CallerAccountID      string
+	RentalID             string
+	ActorKind            rental.ActorKind
+	Reason               string
+	ProcessorOpID        string // set when the trigger is a webhook
 	IsChargebackReversal bool
-	FeeBPSOverride  int64 // 0 = use config default
+	FeeBPSOverride       int64 // 0 = use config default
 }
 
 // CancellationResult is what Cancel returns. The state machine moves the
@@ -166,10 +162,10 @@ type Config struct {
 	CommissionBPS      int64
 
 	// F4 knobs.
-	CancellationFeeBPS     int64 // 10% default = 1000
-	CancellationWindowH    int   // 24h default
-	MinFractionHours       int   // EC-2: minimum fraction when after-start
-	FeatureF4Enabled       bool  // R1 rollback flag
+	CancellationFeeBPS  int64 // 10% default = 1000
+	CancellationWindowH int   // 24h default
+	MinFractionHours    int   // EC-2: minimum fraction when after-start
+	FeatureF4Enabled    bool  // R1 rollback flag
 }
 
 // Defaults fills the zero-valued fields with the documented defaults.

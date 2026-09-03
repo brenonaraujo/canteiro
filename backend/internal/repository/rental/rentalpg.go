@@ -106,49 +106,51 @@ type receiptRow struct {
 func (receiptRow) TableName() string { return "rental_receipts" }
 
 // cancellationRow mirrors rental_cancellations (migration 0006).
+//
+//nolint:fieldalignment // GORM column tags drive the layout; the manual ordering is acceptable.
 type cancellationRow struct {
 	IssuedAt time.Time `gorm:"column:issued_at"`
 
-	ID        string `gorm:"column:id;primaryKey"`
-	RentalID  string `gorm:"column:rental_id;unique"`
+	ID             string `gorm:"column:id;primaryKey"`
+	RentalID       string `gorm:"column:rental_id;unique"`
 	ActorAccountID string `gorm:"column:actor_account_id"`
-	ActorKind string `gorm:"column:actor_kind"`
-	WindowApplied   string `gorm:"column:window_applied"`
-	StateDeposit    string `gorm:"column:state_deposit"`
+	ActorKind      string `gorm:"column:actor_kind"`
+	WindowApplied  string `gorm:"column:window_applied"`
+	StateDeposit   string `gorm:"column:state_deposit"`
 
-	CancellationFeeCents                    int64 `gorm:"column:cancellation_fee_cents"`
-	TenantRefundCents                       int64 `gorm:"column:tenant_refund_cents"`
-	OwnerPayoutCentsAfterCancellation      int64 `gorm:"column:owner_payout_cents_after_cancellation"`
-	OperatorPayoutCentsAfterCancellation   int64 `gorm:"column:operator_payout_cents_after_cancellation"`
-	CommissionCents                         int64 `gorm:"column:commission_cents"`
-	DepositCaptureCents                     int64 `gorm:"column:deposit_capture_cents"`
-	DepositReleaseCents                     int64 `gorm:"column:deposit_release_cents"`
-	DepositPartialCaptureCents              int64 `gorm:"column:deposit_partial_capture_cents"`
-	ProcessorOperationID                    string `gorm:"column:processor_operation_id"`
-	ReversalReason                          string `gorm:"column:reversal_reason"`
+	CancellationFeeCents                 int64  `gorm:"column:cancellation_fee_cents"`
+	TenantRefundCents                    int64  `gorm:"column:tenant_refund_cents"`
+	OwnerPayoutCentsAfterCancellation    int64  `gorm:"column:owner_payout_cents_after_cancellation"`
+	OperatorPayoutCentsAfterCancellation int64  `gorm:"column:operator_payout_cents_after_cancellation"`
+	CommissionCents                      int64  `gorm:"column:commission_cents"`
+	DepositCaptureCents                  int64  `gorm:"column:deposit_capture_cents"`
+	DepositReleaseCents                  int64  `gorm:"column:deposit_release_cents"`
+	DepositPartialCaptureCents           int64  `gorm:"column:deposit_partial_capture_cents"`
+	ProcessorOperationID                 string `gorm:"column:processor_operation_id"`
+	ReversalReason                       string `gorm:"column:reversal_reason"`
 }
 
 func (cancellationRow) TableName() string { return "rental_cancellations" }
 
 func toCancellationRecord(row cancellationRow) rentsvc.CancellationRecord {
 	return rentsvc.CancellationRecord{
-		ID:                                    row.ID,
-		RentalID:                              row.RentalID,
-		ActorID:                               row.ActorAccountID,
-		ActorKind:                             rental.ActorKind(row.ActorKind),
-		WindowCode:                            rental.WindowCode(row.WindowApplied),
-		CancellationFeeCents:                  row.CancellationFeeCents,
-		TenantRefundCents:                     row.TenantRefundCents,
-		OwnerPayoutCentsAfterCancellation:     row.OwnerPayoutCentsAfterCancellation,
+		ID:                                   row.ID,
+		RentalID:                             row.RentalID,
+		ActorID:                              row.ActorAccountID,
+		ActorKind:                            rental.ActorKind(row.ActorKind),
+		WindowCode:                           rental.WindowCode(row.WindowApplied),
+		CancellationFeeCents:                 row.CancellationFeeCents,
+		TenantRefundCents:                    row.TenantRefundCents,
+		OwnerPayoutCentsAfterCancellation:    row.OwnerPayoutCentsAfterCancellation,
 		OperatorPayoutCentsAfterCancellation: row.OperatorPayoutCentsAfterCancellation,
-		CommissionCents:                       row.CommissionCents,
-		DepositState:                          rental.DepositState(row.StateDeposit),
-		DepositCaptureCents:                   row.DepositCaptureCents,
-		DepositReleaseCents:                   row.DepositReleaseCents,
-		DepositPartialCaptureCents:            row.DepositPartialCaptureCents,
-		ProcessorOperationID:                  row.ProcessorOperationID,
-		ReversalReason:                        row.ReversalReason,
-		IssuedAt:                              row.IssuedAt,
+		CommissionCents:                      row.CommissionCents,
+		DepositState:                         rental.DepositState(row.StateDeposit),
+		DepositCaptureCents:                  row.DepositCaptureCents,
+		DepositReleaseCents:                  row.DepositReleaseCents,
+		DepositPartialCaptureCents:           row.DepositPartialCaptureCents,
+		ProcessorOperationID:                 row.ProcessorOperationID,
+		ReversalReason:                       row.ReversalReason,
+		IssuedAt:                             row.IssuedAt,
 	}
 }
 
@@ -159,23 +161,23 @@ func (r *Repo) SaveCancellation(ctx context.Context, c rentsvc.CancellationRecor
 		c.ID = uuid.NewString()
 	}
 	row := cancellationRow{
-		ID:                                    c.ID,
-		RentalID:                              c.RentalID,
-		ActorAccountID:                        c.ActorID,
-		ActorKind:                             string(c.ActorKind),
-		WindowApplied:                         string(c.WindowCode),
-		StateDeposit:                          string(c.DepositState),
-		CancellationFeeCents:                  c.CancellationFeeCents,
-		TenantRefundCents:                     c.TenantRefundCents,
-		OwnerPayoutCentsAfterCancellation:     c.OwnerPayoutCentsAfterCancellation,
+		ID:                                   c.ID,
+		RentalID:                             c.RentalID,
+		ActorAccountID:                       c.ActorID,
+		ActorKind:                            string(c.ActorKind),
+		WindowApplied:                        string(c.WindowCode),
+		StateDeposit:                         string(c.DepositState),
+		CancellationFeeCents:                 c.CancellationFeeCents,
+		TenantRefundCents:                    c.TenantRefundCents,
+		OwnerPayoutCentsAfterCancellation:    c.OwnerPayoutCentsAfterCancellation,
 		OperatorPayoutCentsAfterCancellation: c.OperatorPayoutCentsAfterCancellation,
-		CommissionCents:                       c.CommissionCents,
-		DepositCaptureCents:                   c.DepositCaptureCents,
-		DepositReleaseCents:                   c.DepositReleaseCents,
-		DepositPartialCaptureCents:            c.DepositPartialCaptureCents,
-		ProcessorOperationID:                  c.ProcessorOperationID,
-		ReversalReason:                        c.ReversalReason,
-		IssuedAt:                              c.IssuedAt,
+		CommissionCents:                      c.CommissionCents,
+		DepositCaptureCents:                  c.DepositCaptureCents,
+		DepositReleaseCents:                  c.DepositReleaseCents,
+		DepositPartialCaptureCents:           c.DepositPartialCaptureCents,
+		ProcessorOperationID:                 c.ProcessorOperationID,
+		ReversalReason:                       c.ReversalReason,
+		IssuedAt:                             c.IssuedAt,
 	}
 	if c.IssuedAt.IsZero() {
 		row.IssuedAt = time.Now().UTC()

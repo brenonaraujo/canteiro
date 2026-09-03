@@ -31,14 +31,14 @@ type State string
 // concurrent capture of the deposit (R2/EC-6 anti-double-penalty);
 // StateCancelled and StateRefunded cover the post-authorization negative paths.
 const (
-	StatePending                 State = "pending"
-	StateAuthorized              State = "authorized"
-	StateConfirmed               State = "confirmed"
-	StateDeclined                State = "declined"
-	StateExpired                 State = "expired"
-	StateCancellationInProgress  State = "cancellation_in_progress"
-	StateCancelled               State = "cancelled"
-	StateRefunded                State = "refunded"
+	StatePending                State = "pending"
+	StateAuthorized             State = "authorized"
+	StateConfirmed              State = "confirmed"
+	StateDeclined               State = "declined"
+	StateExpired                State = "expired"
+	StateCancellationInProgress State = "cancellation_in_progress"
+	StateCancelled              State = "cancelled"
+	StateRefunded               State = "refunded"
 )
 
 // OccupiesCalendar reports whether a rental in this state should block the

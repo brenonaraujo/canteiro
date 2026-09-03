@@ -18,11 +18,17 @@ import (
 // keeps the source-of-truth of the receipt).
 type ActorKind string
 
+// Actor constants — the four F4 cancellation sources.
 const (
-	ActorTenant   ActorKind = "tenant"
-	ActorOwner    ActorKind = "owner"
+	// ActorTenant is the renter.
+	ActorTenant ActorKind = "tenant"
+	// ActorOwner is the listing owner.
+	ActorOwner ActorKind = "owner"
+	// ActorPlatform is the Canteiro platform acting on a webhook
+	// (chargeback, operator refusal, anti-fraud).
 	ActorPlatform ActorKind = "platform"
-	ActorOperator ActorKind = "operator" // AC-7: third-party operator refusal
+	// ActorOperator is the third-party operator refusing the booking.
+	ActorOperator ActorKind = "operator"
 )
 
 // WindowCode is the declarative F4 window applied to a cancellation.
@@ -30,25 +36,40 @@ const (
 // rental_cancellations, and they double as the policy table key.
 type WindowCode string
 
+// Window codes — every F4 declarative outcome. Adding a new window
+// is a new constant + a new policy row; no helper-extraction needed.
 const (
-	WindowTenantPreAccept    WindowCode = "tenant.pre_accept"
-	WindowTenantGe24h        WindowCode = "tenant.ge_24h"
-	WindowTenantLt24h        WindowCode = "tenant.lt_24h"
-	WindowTenantAfterStart   WindowCode = "tenant.after_start"
-	WindowOwnerPrePickup     WindowCode = "owner.pre_pickup"
-	WindowOwnerAfterStart    WindowCode = "owner.after_start"
-	WindowOperatorRefusal    WindowCode = "operator.refusal"
+	// WindowTenantPreAccept — tenant cancels before the owner accepted.
+	WindowTenantPreAccept WindowCode = "tenant.pre_accept"
+	// WindowTenantGe24h — tenant cancels ≥24h before pickup.
+	WindowTenantGe24h WindowCode = "tenant.ge_24h"
+	// WindowTenantLt24h — tenant cancels <24h before pickup.
+	WindowTenantLt24h WindowCode = "tenant.lt_24h"
+	// WindowTenantAfterStart — tenant cancels after the rental started.
+	WindowTenantAfterStart WindowCode = "tenant.after_start"
+	// WindowOwnerPrePickup — owner cancels before pickup.
+	WindowOwnerPrePickup WindowCode = "owner.pre_pickup"
+	// WindowOwnerAfterStart — owner cancels after the rental started.
+	WindowOwnerAfterStart WindowCode = "owner.after_start"
+	// WindowOperatorRefusal — third-party operator refused (AC-7).
+	WindowOperatorRefusal WindowCode = "operator.refusal"
+	// WindowPlatformChargeback — platform reverses on chargeback (EC-5).
 	WindowPlatformChargeback WindowCode = "platform.chargeback"
 )
 
 // DepositState is the deposit outcome of a cancellation.
 type DepositState string
 
+// Deposit outcome states (mirrored in the SQL CHECK constraint).
 const (
+	// DepositReleased — full refund to tenant (default outcome).
 	DepositReleased DepositState = "released"
+	// DepositCaptured — full capture by platform.
 	DepositCaptured DepositState = "captured"
-	DepositPartial  DepositState = "partial"
-	DepositHeld     DepositState = "held"
+	// DepositPartial — partial capture.
+	DepositPartial DepositState = "partial"
+	// DepositHeld — held against the rental; F5 (avarias) decides.
+	DepositHeld DepositState = "held"
 )
 
 // CancellationActor binds the actor kind to its account id.
@@ -60,13 +81,13 @@ type CancellationActor struct {
 
 // CancellationInput is the immutable inputs to the policy.
 type CancellationInput struct {
-	Rental  Rental
-	Actor   CancellationActor
-	Now     time.Time
-	FeeBPS  int64           // cancellation fee in basis points (10% = 1000)
-	WindowH int             // hours before pickup for the ≥24h window
-	MinFractionHours int    // EC-2: minimum fraction when after-start
-	IsChargebackReversal bool // EC-5: chargeback path (platform actor)
+	Rental               Rental
+	Actor                CancellationActor
+	Now                  time.Time
+	FeeBPS               int64 // cancellation fee in basis points (10% = 1000)
+	WindowH              int   // hours before pickup for the ≥24h window
+	MinFractionHours     int   // EC-2: minimum fraction when after-start
+	IsChargebackReversal bool  // EC-5: chargeback path (platform actor)
 }
 
 // CancellationDecision is the immutable, audit-ready output. The
@@ -78,15 +99,15 @@ type CancellationDecision struct {
 	WindowCode WindowCode
 	ActorKind  ActorKind
 
-	CancellationFeeCents              int64
-	TenantRefundCents                 int64
-	OwnerPayoutCents                  int64
-	OperatorPayoutCents               int64
-	CommissionCents                   int64
+	CancellationFeeCents int64
+	TenantRefundCents    int64
+	OwnerPayoutCents     int64
+	OperatorPayoutCents  int64
+	CommissionCents      int64
 
-	DepositState          DepositState
-	DepositCaptureCents   int64
-	DepositReleaseCents   int64
+	DepositState               DepositState
+	DepositCaptureCents        int64
+	DepositReleaseCents        int64
 	DepositPartialCaptureCents int64
 
 	IsReversal bool
@@ -98,16 +119,16 @@ type CancellationDecision struct {
 // windowPolicy is the rule row keyed by WindowCode. Adding a window =
 // add a row; no helper-extraction needed (skill Option C).
 type windowPolicy struct {
-	window                       WindowCode
-	actor                        ActorKind
-	requiresOwnerAccepted        bool
-	requiresStarted              bool
-	feeBPSOfRent                 int64 // 0 = no fee; non-zero = fee on rent
-	tenantRefundKind             refundKind
-	ownerPayout                  payoutKind
-	operatorPayout               payoutKind
-	deposit                      DepositState
-	depositAction                depositAction
+	window                WindowCode
+	actor                 ActorKind
+	requiresOwnerAccepted bool
+	requiresStarted       bool
+	feeBPSOfRent          int64 // 0 = no fee; non-zero = fee on rent
+	tenantRefundKind      refundKind
+	ownerPayout           payoutKind
+	operatorPayout        payoutKind
+	deposit               DepositState
+	depositAction         depositAction
 }
 
 // refundKind says how the tenant refund is computed.
@@ -115,16 +136,16 @@ type refundKind int
 
 const (
 	refundRentPlusOperator refundKind = iota // rent + operator (no fee)
-	refundRentMinusFee                      // rent - fee
-	refundZero                              // no refund (rent retained)
+	refundRentMinusFee                       // rent - fee
+	refundZero                               // no refund (rent retained)
 )
 
 type payoutKind int
 
 const (
-	payoutZero payoutKind = iota
-	payoutRentRetained  // owner gets rent - commission; operator 0
-	payoutProportional // pro-rata of rent/operator by elapsed time
+	payoutZero         payoutKind = iota
+	payoutRentRetained            // owner gets rent - commission; operator 0
+	payoutProportional            // pro-rata of rent/operator by elapsed time
 )
 
 type depositAction int
@@ -139,87 +160,87 @@ const (
 // readability; lookup is by window code.
 var policies = map[WindowCode]windowPolicy{
 	WindowTenantPreAccept: {
-		window:           WindowTenantPreAccept,
-		actor:            ActorTenant,
+		window:                WindowTenantPreAccept,
+		actor:                 ActorTenant,
 		requiresOwnerAccepted: false,
-		tenantRefundKind: refundRentPlusOperator,
-		ownerPayout:      payoutZero,
-		operatorPayout:   payoutZero,
-		deposit:          DepositReleased,
-		depositAction:    depositRelease,
+		tenantRefundKind:      refundRentPlusOperator,
+		ownerPayout:           payoutZero,
+		operatorPayout:        payoutZero,
+		deposit:               DepositReleased,
+		depositAction:         depositRelease,
 	},
 	WindowTenantGe24h: {
-		window:           WindowTenantGe24h,
-		actor:            ActorTenant,
+		window:                WindowTenantGe24h,
+		actor:                 ActorTenant,
 		requiresOwnerAccepted: true,
-		feeBPSOfRent:     0, // applied dynamically via input.FeeBPS
-		tenantRefundKind: refundRentMinusFee,
-		ownerPayout:      payoutZero,
-		operatorPayout:   payoutZero,
-		deposit:          DepositReleased,
-		depositAction:    depositRelease,
+		feeBPSOfRent:          0, // applied dynamically via input.FeeBPS
+		tenantRefundKind:      refundRentMinusFee,
+		ownerPayout:           payoutZero,
+		operatorPayout:        payoutZero,
+		deposit:               DepositReleased,
+		depositAction:         depositRelease,
 	},
 	WindowTenantLt24h: {
-		window:           WindowTenantLt24h,
-		actor:            ActorTenant,
+		window:                WindowTenantLt24h,
+		actor:                 ActorTenant,
 		requiresOwnerAccepted: true,
-		tenantRefundKind: refundZero,
-		ownerPayout:      payoutRentRetained,
-		operatorPayout:   payoutZero,
-		deposit:          DepositReleased,
-		depositAction:    depositRelease,
+		tenantRefundKind:      refundZero,
+		ownerPayout:           payoutRentRetained,
+		operatorPayout:        payoutZero,
+		deposit:               DepositReleased,
+		depositAction:         depositRelease,
 	},
 	WindowTenantAfterStart: {
-		window:           WindowTenantAfterStart,
-		actor:            ActorTenant,
+		window:                WindowTenantAfterStart,
+		actor:                 ActorTenant,
 		requiresOwnerAccepted: true,
-		requiresStarted:  true,
-		tenantRefundKind: refundZero,
-		ownerPayout:      payoutProportional,
-		operatorPayout:   payoutProportional,
-		deposit:          DepositHeld,
-		depositAction:    depositHold,
+		requiresStarted:       true,
+		tenantRefundKind:      refundZero,
+		ownerPayout:           payoutProportional,
+		operatorPayout:        payoutProportional,
+		deposit:               DepositHeld,
+		depositAction:         depositHold,
 	},
 	WindowOwnerPrePickup: {
-		window:           WindowOwnerPrePickup,
-		actor:            ActorOwner,
+		window:                WindowOwnerPrePickup,
+		actor:                 ActorOwner,
 		requiresOwnerAccepted: true,
-		tenantRefundKind: refundRentPlusOperator,
-		ownerPayout:      payoutZero,
-		operatorPayout:   payoutZero,
-		deposit:          DepositReleased,
-		depositAction:    depositRelease,
+		tenantRefundKind:      refundRentPlusOperator,
+		ownerPayout:           payoutZero,
+		operatorPayout:        payoutZero,
+		deposit:               DepositReleased,
+		depositAction:         depositRelease,
 	},
 	WindowOwnerAfterStart: {
-		window:           WindowOwnerAfterStart,
-		actor:            ActorOwner,
+		window:                WindowOwnerAfterStart,
+		actor:                 ActorOwner,
 		requiresOwnerAccepted: true,
-		requiresStarted:  true,
-		tenantRefundKind: refundRentPlusOperator,
-		ownerPayout:      payoutZero,
-		operatorPayout:   payoutZero,
-		deposit:          DepositHeld,
-		depositAction:    depositHold,
+		requiresStarted:       true,
+		tenantRefundKind:      refundRentPlusOperator,
+		ownerPayout:           payoutZero,
+		operatorPayout:        payoutZero,
+		deposit:               DepositHeld,
+		depositAction:         depositHold,
 	},
 	WindowOperatorRefusal: {
-		window:           WindowOperatorRefusal,
-		actor:            ActorOperator,
+		window:                WindowOperatorRefusal,
+		actor:                 ActorOperator,
 		requiresOwnerAccepted: true,
-		tenantRefundKind: refundRentPlusOperator,
-		ownerPayout:      payoutZero,
-		operatorPayout:   payoutZero,
-		deposit:          DepositReleased,
-		depositAction:    depositRelease,
+		tenantRefundKind:      refundRentPlusOperator,
+		ownerPayout:           payoutZero,
+		operatorPayout:        payoutZero,
+		deposit:               DepositReleased,
+		depositAction:         depositRelease,
 	},
 	WindowPlatformChargeback: {
-		window:           WindowPlatformChargeback,
-		actor:            ActorPlatform,
+		window:                WindowPlatformChargeback,
+		actor:                 ActorPlatform,
 		requiresOwnerAccepted: true,
-		tenantRefundKind: refundRentPlusOperator,
-		ownerPayout:      payoutZero,
-		operatorPayout:   payoutZero,
-		deposit:          DepositHeld,
-		depositAction:    depositHold,
+		tenantRefundKind:      refundRentPlusOperator,
+		ownerPayout:           payoutZero,
+		operatorPayout:        payoutZero,
+		deposit:               DepositHeld,
+		depositAction:         depositHold,
 	},
 }
 
@@ -279,7 +300,7 @@ func classifyWindow(in CancellationInput) (WindowCode, bool) {
 			if !r.StartsAt.After(in.Now) {
 				return WindowTenantAfterStart, true
 			}
-			if in.Now.Add(time.Duration(in.WindowH) * time.Hour).Before(r.StartsAt) ||
+			if in.Now.Add(time.Duration(in.WindowH)*time.Hour).Before(r.StartsAt) ||
 				in.Now.Add(time.Duration(in.WindowH)*time.Hour).Equal(r.StartsAt) {
 				return WindowTenantGe24h, true
 			}
@@ -345,11 +366,7 @@ func applyPolicy(in CancellationInput, p windowPolicy) CancellationDecision {
 	}
 
 	// 3. Commission recovery / record. Chargeback reverses everything.
-	if in.IsChargebackReversal {
-		d.CommissionCents = in.Rental.CommissionCents // recovered from the platform's books
-	} else {
-		d.CommissionCents = in.Rental.CommissionCents
-	}
+	d.CommissionCents = in.Rental.CommissionCents // commission recoverable on chargeback
 
 	// 4. Deposit action.
 	d.DepositState = p.deposit

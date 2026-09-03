@@ -23,8 +23,8 @@ type fakeRepo struct {
 	receipts      map[string]rental.Receipt
 	blocks        map[string][]rentsvc.Block
 	cancellations map[string]rentsvc.CancellationRecord
-	blockedAccts    map[string]bool
-	mu       sync.Mutex
+	blockedAccts  map[string]bool
+	mu            sync.Mutex
 }
 
 func newFakeRepo() *fakeRepo {
