@@ -290,5 +290,117 @@
       "payout_not_set": "Cadastre os dados de recebimento antes de publicar.",
       "gates_failed": "Corrija os requisitos abaixo antes de publicar."
     }
+  },
+  "breadcrumb": {
+    "rentals": "Minhas locações",
+    "rental": "Locação",
+    "rental_receipt": "Recibo"
+  },
+  "rental": {
+    "list": {
+      "title": "Minhas locações",
+      "subtitle": "Acompanhe suas reservas, pagamentos e cancelamentos.",
+      "empty_title": "Você ainda não tem locações",
+      "empty_body": "Encontre equipamentos no catálogo público e reserve.",
+      "go_catalog": "Ver catálogo",
+      "view_detail": "Abrir",
+      "view_detail_aria": "Abrir locação de {title}"
+    },
+    "state": {
+      "pending": "Pendente",
+      "authorized": "Autorizada",
+      "confirmed": "Confirmada",
+      "declined": "Recusada",
+      "expired": "Expirada",
+      "cancelled": "Cancelada",
+      "cancellation_in_progress": "Cancelamento em andamento",
+      "refunded": "Reembolsada"
+    },
+    "detail": {
+      "title": "Locação",
+      "subtitle": "Acompanhe totais, cancele antes da retirada ou abra o recibo.",
+      "totals_title": "Cobranças e repasses",
+      "summary": {
+        "window": "Janela de cancelamento",
+        "rental_window": "Janela da locação",
+        "with_operator": "Inclui operador",
+        "without_operator": "Sem operador"
+      }
+    },
+    "banner": {
+      "in_progress_title": "Cancelamento em andamento",
+      "in_progress_body": "Estamos processando o cancelamento. O recibo aparecerá assim que a plataforma confirmá-lo.",
+      "in_dispute_title": "Chargeback aberto",
+      "in_dispute_body": "Há um chargeback aberto com o processador. Esta locação não pode ser editada pelas partes até a disputa ser encerrada."
+    },
+    "totals": {
+      "title": "Cobranças e repasses",
+      "rent": "Aluguel",
+      "operator": "Horas de operador",
+      "operator_hours": "{hours} h",
+      "deposit": "Caução",
+      "deposit_note": "Retida pela plataforma até a devolução.",
+      "subtotal": "Subtotal (aluguel + operador)",
+      "total": "Total cobrado",
+      "commission": "Comissão da plataforma",
+      "owner_payout": "Líquido do proprietário",
+      "operator_payout": "Líquido do operador",
+      "cancellation_fee": "Taxa de cancelamento",
+      "deposit_status": {
+        "held": "Caução retida",
+        "released": "Caução liberada",
+        "partial": "Caução capturada parcialmente",
+        "forfeit": "Caução perdida"
+      }
+    },
+    "window": {
+      "pre_acceptance": "Cancelada antes do aceite",
+      "before_24h_post_acceptance": "Cancelada ≥ 24h antes da retirada",
+      "within_24h_post_acceptance": "Cancelada < 24h antes da retirada",
+      "after_start": "Cancelada após a retirada",
+      "unknown": "Janela de cancelamento"
+    },
+    "actions": {
+      "cancel_tenant": "Cancelar locação",
+      "cancel_owner": "Cancelar locação",
+      "view_receipt": "Ver recibo",
+      "opening_receipt": "Carregando recibo…",
+      "cancelling": "Cancelando…",
+      "in_dispute": "Em disputa",
+      "in_dispute_desc": "Existe um chargeback aberto. A locação não pode ser alterada pelas partes."
+    },
+    "confirm_cancel": {
+      "title_tenant": "Cancelar esta locação?",
+      "title_owner": "Cancelar esta locação?",
+      "body_tenant": "A janela de cancelamento define o que você recebe de volta. Você verá o detalhamento no recibo.",
+      "body_owner": "O locatário receberá estorno integral. Haverá penalidade de reputação na sua conta.",
+      "submit_tenant": "Sim, cancelar",
+      "submit_owner": "Sim, cancelar e estornar",
+      "submit_pending": "Processando…"
+    },
+    "receipt": {
+      "title": "Recibo",
+      "subtitle": "Emitido pela plataforma. Registro imutável deste cancelamento.",
+      "cancelled_by_tenant": "Cancelada pelo locatário",
+      "cancelled_by_owner": "Cancelada pelo proprietário",
+      "cancelled_by_platform": "Cancelada pela plataforma",
+      "cancelled_by_system": "Cancelada pelo sistema",
+      "cancelled_at": "Cancelada em (UTC)",
+      "issued_at": "Emitida em (UTC)",
+      "window_label": "Janela aplicada",
+      "bruto": "Bruto",
+      "processor_ref": "Identificador no processador",
+      "no_receipt": "Nenhum recibo disponível ainda.",
+      "back_to_rental": "Voltar para a locação"
+    },
+    "error": {
+      "generic": "Algo deu errado. Tente novamente.",
+      "unauthorized": "Sua sessão expirou. Entre novamente.",
+      "forbidden": "Você não tem permissão para esta locação.",
+      "not_found": "Locação não encontrada.",
+      "conflict": "Esta locação não pode ser alterada no estado atual.",
+      "receipt_not_ready": "O recibo ainda não está pronto.",
+      "cancel_failed": "Não foi possível cancelar a locação."
+    }
   }
 }

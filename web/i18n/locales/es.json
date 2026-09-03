@@ -290,5 +290,117 @@
       "payout_not_set": "Configura los datos de cobro antes de publicar.",
       "gates_failed": "Corrige los requisitos siguientes antes de publicar."
     }
+  },
+  "breadcrumb": {
+    "rentals": "Mis alquileres",
+    "rental": "Alquiler",
+    "rental_receipt": "Recibo"
+  },
+  "rental": {
+    "list": {
+      "title": "Mis alquileres",
+      "subtitle": "Sigue tus reservas, pagos y cancelaciones.",
+      "empty_title": "Aún no tienes alquileres",
+      "empty_body": "Encuentra equipos en el catálogo público y reserva.",
+      "go_catalog": "Ver catálogo",
+      "view_detail": "Abrir",
+      "view_detail_aria": "Abrir alquiler de {title}"
+    },
+    "state": {
+      "pending": "Pendiente",
+      "authorized": "Autorizado",
+      "confirmed": "Confirmado",
+      "declined": "Rechazado",
+      "expired": "Expirado",
+      "cancelled": "Cancelado",
+      "cancellation_in_progress": "Cancelamiento en curso",
+      "refunded": "Reembolsado"
+    },
+    "detail": {
+      "title": "Alquiler",
+      "subtitle": "Sigue los totales, cancela antes de la recogida o abre el recibo.",
+      "totals_title": "Cobros y pagos",
+      "summary": {
+        "window": "Ventana de cancelación",
+        "rental_window": "Ventana del alquiler",
+        "with_operator": "Incluye operador",
+        "without_operator": "Sin operador"
+      }
+    },
+    "banner": {
+      "in_progress_title": "Cancelamiento en curso",
+      "in_progress_body": "Estamos procesando la cancelación. El recibo aparecerá cuando la plataforma lo confirme.",
+      "in_dispute_title": "Contracargo abierto",
+      "in_dispute_body": "Hay un contracargo abierto con el procesador. Este alquiler no puede ser editado por las partes hasta que se cierre la disputa."
+    },
+    "totals": {
+      "title": "Cargos y pagos",
+      "rent": "Alquiler",
+      "operator": "Horas de operador",
+      "operator_hours": "{hours} h",
+      "deposit": "Depósito",
+      "deposit_note": "Retenido por la plataforma hasta la devolución.",
+      "subtotal": "Subtotal (alquiler + operador)",
+      "total": "Total cobrado",
+      "commission": "Comisión de la plataforma",
+      "owner_payout": "Pago al propietario",
+      "operator_payout": "Pago al operador",
+      "cancellation_fee": "Tarifa de cancelación",
+      "deposit_status": {
+        "held": "Depósito retenido",
+        "released": "Depósito liberado",
+        "partial": "Depósito capturado parcialmente",
+        "forfeit": "Depósito perdido"
+      }
+    },
+    "window": {
+      "pre_acceptance": "Cancelada antes de la aceptación",
+      "before_24h_post_acceptance": "Cancelada ≥ 24h antes de la recogida",
+      "within_24h_post_acceptance": "Cancelada < 24h antes de la recogida",
+      "after_start": "Cancelada después de la recogida",
+      "unknown": "Ventana de cancelación"
+    },
+    "actions": {
+      "cancel_tenant": "Cancelar alquiler",
+      "cancel_owner": "Cancelar alquiler",
+      "view_receipt": "Ver recibo",
+      "opening_receipt": "Cargando recibo…",
+      "cancelling": "Cancelando…",
+      "in_dispute": "En disputa",
+      "in_dispute_desc": "Hay un contracargo abierto. Las partes no pueden editar este alquiler."
+    },
+    "confirm_cancel": {
+      "title_tenant": "¿Cancelar este alquiler?",
+      "title_owner": "¿Cancelar este alquiler?",
+      "body_tenant": "La ventana de cancelación define cuánto te devuelven. Verás el detalle en el recibo.",
+      "body_owner": "El arrendatario recibirá un reembolso completo. Se registrará una sanción de reputación en tu cuenta.",
+      "submit_tenant": "Sí, cancelar",
+      "submit_owner": "Sí, cancelar y reembolsar",
+      "submit_pending": "Procesando…"
+    },
+    "receipt": {
+      "title": "Recibo",
+      "subtitle": "Emitido por la plataforma. Registro inmutable de esta cancelación.",
+      "cancelled_by_tenant": "Cancelado por el arrendatario",
+      "cancelled_by_owner": "Cancelado por el propietario",
+      "cancelled_by_platform": "Cancelado por la plataforma",
+      "cancelled_by_system": "Cancelado por el sistema",
+      "cancelled_at": "Cancelado a las (UTC)",
+      "issued_at": "Emitido a las (UTC)",
+      "window_label": "Ventana aplicada",
+      "bruto": "Bruto",
+      "processor_ref": "Identificador en el procesador",
+      "no_receipt": "Aún no hay recibo disponible.",
+      "back_to_rental": "Volver al alquiler"
+    },
+    "error": {
+      "generic": "Algo salió mal. Inténtalo de nuevo.",
+      "unauthorized": "Tu sesión ha expirado. Vuelve a iniciar sesión.",
+      "forbidden": "No tienes permiso para este alquiler.",
+      "not_found": "Alquiler no encontrado.",
+      "conflict": "Este alquiler no puede modificarse en su estado actual.",
+      "receipt_not_ready": "El recibo aún no está listo.",
+      "cancel_failed": "No se pudo cancelar el alquiler."
+    }
   }
 }

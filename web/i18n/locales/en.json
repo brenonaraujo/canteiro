@@ -290,5 +290,117 @@
       "payout_not_set": "Set up your payout details before publishing.",
       "gates_failed": "Fix the requirements below before publishing."
     }
+  },
+  "breadcrumb": {
+    "rentals": "My rentals",
+    "rental": "Rental",
+    "rental_receipt": "Receipt"
+  },
+  "rental": {
+    "list": {
+      "title": "My rentals",
+      "subtitle": "Track your reservations, payments and cancellations.",
+      "empty_title": "You have no rentals yet",
+      "empty_body": "Find equipment in the public catalog and reserve it.",
+      "go_catalog": "Browse the catalog",
+      "view_detail": "Open",
+      "view_detail_aria": "Open rental for {title}"
+    },
+    "state": {
+      "pending": "Pending",
+      "authorized": "Authorized",
+      "confirmed": "Confirmed",
+      "declined": "Declined",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "cancellation_in_progress": "Cancellation in progress",
+      "refunded": "Refunded"
+    },
+    "detail": {
+      "title": "Rental",
+      "subtitle": "Track totals, cancel before pickup, or open the receipt.",
+      "totals_title": "Charges and payouts",
+      "summary": {
+        "window": "Cancellation window",
+        "rental_window": "Rental window",
+        "with_operator": "Includes operator",
+        "without_operator": "Self-service"
+      }
+    },
+    "banner": {
+      "in_progress_title": "Cancellation in progress",
+      "in_progress_body": "We are processing the cancellation. The receipt will appear as soon as the platform commits it.",
+      "in_dispute_title": "Chargeback open",
+      "in_dispute_body": "A chargeback is open with the processor. This rental cannot be edited by either party until the dispute is closed."
+    },
+    "totals": {
+      "title": "Charges and payouts",
+      "rent": "Rent",
+      "operator": "Operator hours",
+      "operator_hours": "{hours} h",
+      "deposit": "Deposit",
+      "deposit_note": "Held by the platform until return.",
+      "subtotal": "Subtotal (rent + operator)",
+      "total": "Total charged",
+      "commission": "Platform commission",
+      "owner_payout": "Owner payout",
+      "operator_payout": "Operator payout",
+      "cancellation_fee": "Cancellation fee",
+      "deposit_status": {
+        "held": "Deposit held",
+        "released": "Deposit released",
+        "partial": "Deposit partially captured",
+        "forfeit": "Deposit forfeited"
+      }
+    },
+    "window": {
+      "pre_acceptance": "Cancelled before owner acceptance",
+      "before_24h_post_acceptance": "Cancelled ≥ 24h before pickup",
+      "within_24h_post_acceptance": "Cancelled < 24h before pickup",
+      "after_start": "Cancelled after pickup",
+      "unknown": "Cancellation window"
+    },
+    "actions": {
+      "cancel_tenant": "Cancel rental",
+      "cancel_owner": "Cancel rental",
+      "view_receipt": "View receipt",
+      "opening_receipt": "Loading receipt…",
+      "cancelling": "Cancelling…",
+      "in_dispute": "In dispute",
+      "in_dispute_desc": "A chargeback is open. This rental cannot be edited by either party."
+    },
+    "confirm_cancel": {
+      "title_tenant": "Cancel this rental?",
+      "title_owner": "Cancel this rental?",
+      "body_tenant": "The cancellation window determines what you get back. You will see the breakdown on the receipt.",
+      "body_owner": "The renter will receive a full refund. A reputation penalty will be applied to your account.",
+      "submit_tenant": "Yes, cancel",
+      "submit_owner": "Yes, cancel and refund",
+      "submit_pending": "Processing…"
+    },
+    "receipt": {
+      "title": "Receipt",
+      "subtitle": "Issued by the platform. Immutable record of this cancellation.",
+      "cancelled_by_tenant": "Cancelled by the renter",
+      "cancelled_by_owner": "Cancelled by the owner",
+      "cancelled_by_platform": "Cancelled by the platform",
+      "cancelled_by_system": "Cancelled by the system",
+      "cancelled_at": "Cancelled at (UTC)",
+      "issued_at": "Issued at (UTC)",
+      "window_label": "Window applied",
+      "bruto": "Gross",
+      "processor_ref": "Processor reference",
+      "no_receipt": "No receipt is available yet.",
+      "back_to_rental": "Back to rental"
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "unauthorized": "Your session has expired. Please sign in again.",
+      "forbidden": "You don't have permission for this rental.",
+      "not_found": "Rental not found.",
+      "conflict": "This rental cannot be modified in its current state.",
+      "receipt_not_ready": "Receipt is not ready yet.",
+      "cancel_failed": "Could not cancel the rental."
+    }
   }
 }
