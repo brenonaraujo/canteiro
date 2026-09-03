@@ -48,6 +48,7 @@ func newPaymentRouter(t *testing.T, svc handler.RentalWebhookService, verify han
 }
 
 type paymentServer struct {
+	handler.F5Stubs
 	api *handler.PaymentAPI
 }
 

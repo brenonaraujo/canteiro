@@ -13,11 +13,14 @@ import (
 
 	"github.com/brenonaraujo/canteiro/backend/internal/app"
 	"github.com/brenonaraujo/canteiro/backend/internal/domain/listing"
+	"github.com/brenonaraujo/canteiro/backend/internal/domain/rental"
 	"github.com/brenonaraujo/canteiro/backend/internal/handler"
 	"github.com/brenonaraujo/canteiro/backend/internal/payment"
 	"github.com/brenonaraujo/canteiro/backend/internal/platform/postgres"
 	rentsvc "github.com/brenonaraujo/canteiro/backend/internal/rental"
+	f5svc "github.com/brenonaraujo/canteiro/backend/internal/rental/f5"
 	"github.com/brenonaraujo/canteiro/backend/internal/repository"
+	f5pg "github.com/brenonaraujo/canteiro/backend/internal/repository/f5"
 	listingpg "github.com/brenonaraujo/canteiro/backend/internal/repository/listing"
 	rentalpg "github.com/brenonaraujo/canteiro/backend/internal/repository/rental"
 )
@@ -52,6 +55,15 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker,
 	rentalSvc := rentsvc.NewService(rentalRepo, rentalListingLookup, authAPI.Accounts(), rentalProvider, rentsvc.Config{})
 	rentalAPI := handler.NewRentalAPI(rentalSvc, authAPI.CurrentAccountID)
 	paymentAPI := handler.NewPaymentAPI(rentalSvc, rentalProvider)
+	// F5: wire the devolution + damage + debt service. The repos are
+	// Postgres-backed; the rental lookup is the F3 rental.Service (the F5
+	// service only needs Get(id)).
+	f5ReturnRepo := f5pg.NewReturnRepo(db)
+	f5DamageRepo := f5pg.NewDamageRepo(db)
+	f5DebtRepo := f5pg.NewDebtRepo(db)
+	rentalLookup := &rentalLookupAdapter{svc: rentalSvc}
+	f5Svc := f5svc.NewService(f5svc.Config{}, rentalLookup, f5ReturnRepo, f5DamageRepo, f5DebtRepo)
+	f5API := handler.NewF5API(f5Svc, f5Svc, f5Svc, authAPI.CurrentAccountID)
 	return app.NewRouter(app.ServerOpts{
 		ServiceName: cfg.ServiceName,
 		MetricsPath: cfg.MetricsPath,
@@ -62,8 +74,19 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker,
 		Listing:     listingAPI,
 		Rental:      rentalAPI,
 		Payment:     paymentAPI,
+		F5:          f5API,
 		CORSOrigin:  cfg.WebAppURL,
 	})
+}
+
+// rentalLookupAdapter bridges rental.Service.Get to the
+// f5.RentalLookup surface (which only needs ctx+id).
+type rentalLookupAdapter struct {
+	svc *rentsvc.Service
+}
+
+func (a *rentalLookupAdapter) Get(ctx context.Context, id string) (rental.Rental, error) {
+	return a.svc.Get(ctx, id)
 }
 
 // listingLookupAdapter bridges listing.Service.GetPublic to the

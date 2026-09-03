@@ -20,6 +20,7 @@ type ServerOpts struct { //nolint:govet // fieldalignment vs readable wiring
 	Listing     *handler.ListingAPI
 	Rental      *handler.RentalAPI
 	Payment     *handler.PaymentAPI
+	F5          *handler.F5API
 	ServiceName string
 	MetricsPath string
 	GinMode     string
@@ -32,6 +33,7 @@ type apiMux struct {
 	*handler.ListingAPI
 	*handler.RentalAPI
 	*handler.PaymentAPI
+	*handler.F5API
 }
 
 // NewRouter builds recovery, CORS, metrics, locale, health, auth and metrics scrape.
@@ -48,6 +50,7 @@ func NewRouter(opts ServerOpts) *gin.Engine {
 		ListingAPI: opts.Listing,
 		RentalAPI:  opts.Rental,
 		PaymentAPI: opts.Payment,
+		F5API:      opts.F5,
 	})
 	r.GET(metricsPath(opts.MetricsPath), gin.WrapH(promhttp.Handler()))
 	return r

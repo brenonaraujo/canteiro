@@ -1024,6 +1024,263 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /rentals/{id}/pickup:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: RegisterRentalPickup
+      tags: [rentals]
+      summary: Register pickup state (either party)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnEvidence"
+      responses:
+        "200":
+          description: Return row created (in_progress)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Return"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /rentals/{id}/return:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: RegisterRentalReturn
+      tags: [rentals]
+      summary: Register return state and close the rental (either party)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnEvidence"
+      responses:
+        "200":
+          description: Return closed (deposit released)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Return"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /rentals/{id}/damage:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: OpenDamageClaim
+      tags: [damage]
+      summary: Open a damage claim for the rental (owner, 48h window)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenDamageClaimRequest"
+      responses:
+        "201":
+          description: Claim opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DamageClaim"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /damage/{id}/respond:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: RespondDamageClaim
+      tags: [damage]
+      summary: Renter response to an open claim (48h window)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondDamageClaimRequest"
+      responses:
+        "200":
+          description: Claim updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DamageClaim"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /damage/{id}/resolve:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: StaffResolveDamage
+      tags: [damage]
+      summary: Staff resolution of a contested claim (final in v1)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffResolveDamageRequest"
+      responses:
+        "200":
+          description: Claim resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DamageClaim"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /debt/{id}/settle:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: SettleDebt
+      tags: [debt]
+      summary: Mark a debt as paid (renter)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleDebtRequest"
+      responses:
+        "200":
+          description: Debt settled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Debt"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /debt/{id}/forgive:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: ForgiveDebt
+      tags: [debt]
+      summary: Forgive a debt (staff; reason mandatory)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgiveDebtRequest"
+      responses:
+        "200":
+          description: Debt updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Debt"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
 components:
   securitySchemes:
     cookieAuth:
@@ -1986,6 +2243,194 @@ components:
               type: string
             failure_message:
               type: string
+    ReturnState:
+      type: string
+      enum: [awaiting_pickup, in_progress, awaiting_confirmation, closed, contested]
+    Return:
+      type: object
+      required: [id, rental_id, state]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rental_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ReturnState"
+        pickup_evidence:
+          $ref: "#/components/schemas/ReturnEvidence"
+        return_evidence:
+          $ref: "#/components/schemas/ReturnEvidence"
+        deposit_released_cents:
+          type: integer
+          minimum: 0
+        deposit_captured_cents:
+          type: integer
+          minimum: 0
+        returned_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ReturnEvidence:
+      type: object
+      properties:
+        photos:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        checklist:
+          type: array
+          items:
+            type: string
+    DamageState:
+      type: string
+      enum: [open, renter_agreed, contested, staff_resolved, expired, cancelled]
+    DamageNature:
+      type: string
+      enum: [cosmetic, functional, loss]
+    DamageClaim:
+      type: object
+      required: [id, rental_id, state, nature]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rental_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/DamageState"
+        nature:
+          $ref: "#/components/schemas/DamageNature"
+        description:
+          type: string
+        proposed_cents:
+          type: integer
+          minimum: 0
+        agreed_cents:
+          type: integer
+          minimum: 0
+        opened_at:
+          type: string
+          format: date-time
+        responded_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+    OpenDamageClaimRequest:
+      type: object
+      required: [nature, proposed_cents, description]
+      properties:
+        nature:
+          $ref: "#/components/schemas/DamageNature"
+        proposed_cents:
+          type: integer
+          minimum: 1
+        description:
+          type: string
+          minLength: 1
+        evidence:
+          $ref: "#/components/schemas/ReturnEvidence"
+    RespondDamageClaimRequest:
+      type: object
+      required: [response]
+      properties:
+        response:
+          type: string
+          enum: [agree, contest, counter]
+        agreed_cents:
+          type: integer
+          minimum: 1
+        note:
+          type: string
+    StaffResolveDamageRequest:
+      type: object
+      required: [agreed_cents, note]
+      properties:
+        agreed_cents:
+          type: integer
+          minimum: 1
+        note:
+          type: string
+          minLength: 1
+    DebtState:
+      type: string
+      enum: [open, settled, forgiven]
+    Debt:
+      type: object
+      required: [id, rental_id, state, original_cents]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rental_id:
+          type: string
+          format: uuid
+        damage_id:
+          type: string
+          format: uuid
+        renter_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/DebtState"
+        original_cents:
+          type: integer
+          minimum: 1
+        forgiven_cents:
+          type: integer
+          minimum: 0
+        settled_cents:
+          type: integer
+          minimum: 0
+        forgiven_reason:
+          type: string
+        due_at:
+          type: string
+          format: date-time
+        settled_at:
+          type: string
+          format: date-time
+        forgiven_at:
+          type: string
+          format: date-time
+    ForgiveDebtRequest:
+      type: object
+      required: [cents, reason]
+      properties:
+        cents:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+    SettleDebtRequest:
+      type: object
+      required: [settled_cents]
+      properties:
+        settled_cents:
+          type: integer
+          format: int64
+          minimum: 1
+          description: |
+            Amount the renter is settling. Must equal the debt's
+            remaining (original - forgiven - already settled). The
+            service enforces the match server-side and rejects mismatches
+            with 422 debt_amount_invalid; the handler is a thin
+            pass-through.
   responses:
     BadRequest:
       description: Bad request

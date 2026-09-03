@@ -345,6 +345,7 @@ func newRentalRouter(t *testing.T, sessionID string) *gin.Engine {
 }
 
 type rentalServer struct {
+	handler.F5Stubs
 	api *handler.RentalAPI
 }
 

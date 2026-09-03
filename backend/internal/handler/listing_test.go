@@ -245,6 +245,7 @@ func newRouter(t *testing.T, sessionID string, lookup *fakeAccountLookup) *gin.E
 // listingServer embeds the listing api alongside no-op auth/ops so the
 // ServerInterface dispatch still works for the F2 routes only.
 type listingServer struct {
+	handler.F5Stubs
 	api *handler.ListingAPI
 }
 
