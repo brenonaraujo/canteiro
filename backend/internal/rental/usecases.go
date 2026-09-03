@@ -23,6 +23,9 @@ func (s *Service) CreateIntent(ctx context.Context, in CreateIntentInput) (renta
 	if err := s.requireActiveTenant(ctx, in.TenantID); err != nil {
 		return rental.Rental{}, rental.MoneyBreakdown{}, err
 	}
+	if err := s.requireNoOpenDebt(ctx, in.TenantID); err != nil {
+		return rental.Rental{}, rental.MoneyBreakdown{}, err
+	}
 	_, snap, err := s.requirePublishedListingSnapshot(ctx, in.ListingID)
 	if err != nil {
 		return rental.Rental{}, rental.MoneyBreakdown{}, err

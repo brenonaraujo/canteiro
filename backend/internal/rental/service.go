@@ -145,6 +145,14 @@ type AccountLookup interface {
 	GetByID(ctx context.Context, id string) (account.Account, error)
 }
 
+// DebtGate is the read-only slice of the F5 debt service that F3 consumes
+// (Pilar 5). A renter carrying an open avaria debt cannot open a new
+// reservation intent. F5 owns every write to the debt lifecycle — this port
+// exists so F3 never imports the F5 package and never mutates debt state.
+type DebtGate interface {
+	HasOpenDebt(ctx context.Context, renterID string) (bool, error)
+}
+
 // IDGenerator produces rental + receipt + intent + webhook ids.
 type IDGenerator interface {
 	String() string
@@ -154,6 +162,7 @@ type IDGenerator interface {
 type Config struct {
 	IDGen              IDGenerator
 	Now                func() time.Time
+	DebtGate           DebtGate // Pilar 5 F5 gate; nil disables the check
 	DefaultCurrency    string
 	ProviderName       string
 	ProviderWebhookKey string
@@ -258,6 +267,32 @@ func NewService(repo Repository, listing ListingLookup, accounts AccountLookup, 
 		payment:  payment,
 		cfg:      cfg,
 	}
+}
+
+// SetDebtGate wires the F5 Pilar 5 debt gate after construction. The setter
+// exists because the F5 service depends on this service for rental lookup,
+// so the two cannot both be fully wired at construction time. Calling it
+// with nil leaves the gate disabled.
+func (s *Service) SetDebtGate(g DebtGate) {
+	s.cfg.DebtGate = g
+}
+
+// requireNoOpenDebt is the Pilar 5 gate: a renter with an open avaria debt
+// cannot open a new reservation intent. The check is best-effort by design —
+// a race between this read and the intent write is acceptable (Pilar 5 is a
+// gate, not a pessimistic lock). A nil gate means F5 is not wired.
+func (s *Service) requireNoOpenDebt(ctx context.Context, renterID string) error {
+	if s.cfg.DebtGate == nil {
+		return nil
+	}
+	open, err := s.cfg.DebtGate.HasOpenDebt(ctx, renterID)
+	if err != nil {
+		return err
+	}
+	if open {
+		return rental.ErrOpenDebt
+	}
+	return nil
 }
 
 type defaultIDGen struct{}

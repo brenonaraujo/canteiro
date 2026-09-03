@@ -27,6 +27,11 @@ var (
 	// ErrTenantHasDebt is the tenant carries an unpaid avaria from F5 (AC-12).
 	// F5 owns the writes; F3 reads.
 	ErrTenantHasDebt = errors.New("tenant has unpaid avaria")
+	// ErrOpenDebt is the F5 Pilar 5 gate on CreateIntent: the renter has at
+	// least one open (unpaid, unforgiven) avaria debt, so no new reservation
+	// intent may be opened. F5 owns the debt lifecycle; F3 only reads the
+	// aggregate answer via the DebtGate port.
+	ErrOpenDebt = errors.New("renter has an open debt")
 	// ErrInvalidTransition is the requested state change is not allowed.
 	ErrInvalidTransition = errors.New("invalid state transition")
 	// ErrAcceptanceExpired is the owner tried to accept after the 12h deadline (EC-5).

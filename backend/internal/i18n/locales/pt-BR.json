@@ -36,6 +36,7 @@
   "rental.acceptance_expired": "A janela de 12h para aceite expirou. Estorno integral foi iniciado.",
   "rental.payment_mismatch": "O valor pago diverge do total calculado. Pagamento rejeitado.",
   "rental.tenant_has_debt": "Você possui uma dívida de avaria não paga. Quite ou solicite perdão antes de reservar.",
+  "rental.debt.open_blocks_intent": "Não é possível criar intenção de aluguel enquanto houver dívida em aberto. Quite ou aguarde a resolução.",
   "rental.listing_unavailable": "Este anúncio não está disponível para reserva.",
   "rental.cancellation_forbidden": "Apenas o locatário, o proprietário do anúncio ou o agente de plataforma podem cancelar esta reserva.",
   "rental.cancellation_invalid_actor": "Ator de cancelamento inválido.",
