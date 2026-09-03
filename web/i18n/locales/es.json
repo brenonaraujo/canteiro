@@ -102,5 +102,193 @@
       "generic": "No fue posible terminar. Inténtalo de nuevo.",
       "deactivated": "Esta cuenta fue desactivada y no se reabre en v1."
     }
+  },
+  "common": {
+    "app_name": "Canteiro",
+    "cancel": "Cancelar"
+  },
+  "breadcrumb": {
+    "home": "Inicio",
+    "sign_in": "Entrar",
+    "account": "Cuenta",
+    "deactivate": "Desactivar",
+    "listings": "Catálogo",
+    "listing": "Anuncio",
+    "account_listings": "Mis anuncios",
+    "listing_new": "Nuevo anuncio",
+    "listing_edit": "Editar anuncio"
+  },
+  "listing": {
+    "search": {
+      "title": "Catálogo público",
+      "subtitle": "Encuentra equipos disponibles sin iniciar sesión.",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "page_x_of_y": "Página {x} de {y}",
+      "empty_title": "No hay anuncios compatibles",
+      "empty_body": "Afloja algún filtro (porte, ciudad o fechas) para ver más resultados."
+    },
+    "filters": {
+      "any": "Cualquiera",
+      "category": "Categoría",
+      "size": "Porte",
+      "operator_mode": "Operador",
+      "city": "Ciudad",
+      "city_placeholder": "Ej.: São Paulo",
+      "from": "Disponible desde",
+      "to": "Disponible hasta",
+      "price_min": "Precio mínimo (R$)",
+      "price_max": "Precio máximo (R$)",
+      "clear": "Limpiar",
+      "apply": "Buscar"
+    },
+    "category": {
+      "manual": "Manual",
+      "electric": "Eléctrico",
+      "light_construction": "Obra ligera",
+      "agricultural": "Agrícola",
+      "heavy": "Pesado"
+    },
+    "size": {
+      "light": "Ligero",
+      "heavy": "Pesado"
+    },
+    "operator_mode": {
+      "none": "Sin operador",
+      "optional": "Operador opcional",
+      "required": "Operador obligatorio"
+    },
+    "price": {
+      "per_hour": "hora",
+      "per_day": "día"
+    },
+    "state": {
+      "draft": "Borrador",
+      "published": "Publicado",
+      "paused": "Pausado"
+    },
+    "card": {
+      "view": "Ver anuncio",
+      "view_listing": "Ver anuncio {title}",
+      "deposit_label": "Depósito"
+    },
+    "ficha": {
+      "title": "Anuncio",
+      "city": "Lugar de recogida",
+      "deposit": "Depósito",
+      "lead_time": "Antelación mínima",
+      "lead_time_value": "{hours} h",
+      "description": "Descripción",
+      "unavailable": "No disponible en estos períodos",
+      "unavailable_empty": "Sin bloqueos declarados por el dueño por ahora.",
+      "identity_note": "La identidad y el contacto solo aparecen tras aceptar la reserva (próxima fase)."
+    },
+    "owner": {
+      "title": "Mis anuncios",
+      "subtitle": "Crea, edita, publica y pausa tus anuncios.",
+      "new": "Nuevo anuncio",
+      "edit": "Editar",
+      "view_public": "Ver en el catálogo",
+      "publish": "Publicar",
+      "pause": "Pausar",
+      "republish": "Volver a publicar",
+      "empty_title": "Aún no tienes anuncios",
+      "empty_body": "Crea tu primer anuncio para aparecer en el catálogo público.",
+      "create_first": "Crear mi primer anuncio"
+    },
+    "new": {
+      "title": "Nuevo anuncio",
+      "subtitle": "Rellena los campos. Los anuncios solo aparecen en el catálogo tras publicarse.",
+      "draft_saved": "Borrador guardado",
+      "published": "Anuncio publicado",
+      "publish_invalid": "Corrige los errores antes de publicar.",
+      "save_draft": "Guardar borrador",
+      "publish": "Publicar",
+      "accept_terms_button": "Aceptar términos de propietario"
+    },
+    "edit": {
+      "title": "Editar anuncio",
+      "saved": "Cambios guardados",
+      "published": "Anuncio publicado",
+      "paused": "Anuncio pausado",
+      "published_locked": "Anuncio publicado",
+      "published_locked_desc": "Pausa el anuncio para poder editar los campos.",
+      "save": "Guardar cambios",
+      "publish": "Publicar",
+      "pause": "Pausar"
+    },
+    "form": {
+      "section_basic": "Datos básicos",
+      "section_location": "Ubicación y entrega",
+      "section_pricing": "Precio y depósito",
+      "section_rules": "Reglas del alquiler",
+      "section_operator": "Operador",
+      "section_heavy": "Bien pesado",
+      "title": "Título",
+      "title_placeholder": "Ej.: Taladro Bosch 750W",
+      "description": "Descripción",
+      "description_placeholder": "Qué está incluido, estado, límites de uso…",
+      "category": "Categoría",
+      "photos": "Foto principal (URL)",
+      "photos_hint": "Al menos una foto es obligatoria.",
+      "photos_placeholder": "https://…",
+      "pickup_city": "Ciudad de recogida",
+      "pickup_neighborhood": "Barrio o punto",
+      "delivery_enabled": "Ofrezco entrega",
+      "delivery_coverage": "Área de cobertura",
+      "delivery_coverage_placeholder": "Ej.: hasta 10 km del centro de São Paulo",
+      "price_unit": "Unidad",
+      "per_day": "Por día",
+      "per_hour": "Por hora",
+      "price_amount": "Precio del período",
+      "deposit": "Depósito (R$)",
+      "min_lead_time_hours": "Antelación mínima (horas)",
+      "rules_document_required": "Exigir documento",
+      "rules_experience_required": "Exigir experiencia",
+      "rules_travel_restricted": "Restringir desplazamiento",
+      "rules_min_age": "Edad mínima del arrendatario",
+      "operator_mode": "Modo de operador",
+      "operator_hourly_rate": "Tarifa por hora del operador",
+      "operator_min_hours": "Mínimo de horas por reserva",
+      "operator_name": "Nombre del operador",
+      "operator_phone": "Teléfono del operador",
+      "operator_is_owner": "El operador es el dueño",
+      "heavy_legal_cession": "Declaro que puedo ceder legalmente este bien",
+      "heavy_legal_cession_desc": "Obligatorio para publicar equipo pesado."
+    },
+    "error": {
+      "generic": "Algo salió mal. Inténtalo de nuevo.",
+      "search_failed": "No se pudo buscar el catálogo ahora.",
+      "not_found": "Anuncio no encontrado.",
+      "unauthorized": "Tu sesión ha expirado. Vuelve a entrar.",
+      "forbidden": "No tienes permiso para esta acción.",
+      "conflict": "La operación no pudo completarse en el estado actual.",
+      "gates_failed": "Algunos requisitos del anuncio no se cumplieron."
+    }
+  },
+  "draft": {
+    "error": {
+      "title_length": "El título debe tener entre 4 y 120 caracteres.",
+      "description_length": "La descripción debe tener entre 12 y 4000 caracteres.",
+      "pickup_city_required": "Indica la ciudad de recogida.",
+      "pickup_neighborhood_length": "El barrio debe tener como máximo 80 caracteres.",
+      "price_amount_required": "Indica un precio mayor que cero.",
+      "deposit_required": "Indica el valor del depósito.",
+      "deposit_below_minimum": "El depósito está por debajo del mínimo de esta categoría.",
+      "lead_time_invalid": "Indica una antelación mínima válida.",
+      "photo_required": "Incluye al menos una foto.",
+      "operator_identity_required": "Identifica al operador (nombre obligatorio).",
+      "operator_rate_required": "Indica la tarifa por hora del operador.",
+      "heavy_cession_required": "Declara que puedes ceder legalmente este bien pesado.",
+      "delivery_coverage_required": "Indica un área de cobertura para la entrega."
+    }
+  },
+  "publish": {
+    "error": {
+      "no_session": "Entra en tu cuenta para publicar.",
+      "terms_not_accepted": "Debes aceptar los términos de propietario antes de publicar.",
+      "payout_not_set": "Configura los datos de cobro antes de publicar.",
+      "gates_failed": "Corrige los requisitos siguientes antes de publicar."
+    }
   }
 }
