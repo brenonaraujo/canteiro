@@ -47,6 +47,11 @@ type ReturnRepository interface {
 	Create(ctx context.Context, ret rental.Return) (rental.Return, error)
 	GetByRental(ctx context.Context, rentalID string) (rental.Return, bool, error)
 	UpdateState(ctx context.Context, id string, from, to rental.ReturnState, mutate func(ret *rental.Return)) (rental.Return, error)
+	// Mutate runs a non-state-changing update on a return row. Used by
+	// the Pilar 3 wire (capture deposit + maybe create debt) — the
+	// state itself is `closed` (or `in_progress`) but the deposit
+	// fields and returned_at are mutated outside the state machine.
+	Mutate(ctx context.Context, id string, mutate func(ret *rental.Return)) (rental.Return, error)
 }
 
 // DamageRepository persists DamageClaim rows.

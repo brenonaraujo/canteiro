@@ -196,13 +196,22 @@ type markAgreed struct {
 }
 
 func (s *Service) markRenterAgreed(ctx context.Context, cur rental.DamageClaim, p markAgreed) (rental.DamageClaim, error) {
-	return s.damage.UpdateState(ctx, cur.ID, cur.State, rental.DamageRenterAgreed, func(c *rental.DamageClaim) {
+	updated, err := s.damage.UpdateState(ctx, cur.ID, cur.State, rental.DamageRenterAgreed, func(c *rental.DamageClaim) {
 		c.RespondedAt = &p.now
 		c.RenterResponseKind = string(p.kind)
 		c.RenterResponseNote = p.note
 		c.AgreedCents = p.agreed
 		c.ResolvedAt = &p.now
 	})
+	if err != nil {
+		return rental.DamageClaim{}, err
+	}
+	// Pilar 3 wire — capture deposit + maybe create debt (Path B:
+	// return row already exists when the renter agrees).
+	if err := s.wirePilar3OnClaimResolved(ctx, updated, p.agreed); err != nil {
+		return rental.DamageClaim{}, err
+	}
+	return updated, nil
 }
 
 func (s *Service) markRenterContested(ctx context.Context, cur rental.DamageClaim, note string, now time.Time) (rental.DamageClaim, error) {
@@ -237,12 +246,20 @@ func (s *Service) StaffResolve(ctx context.Context, in StaffResolveInput) (renta
 	}
 	now := s.cfg.Now.Now()
 	decidedAt := now
-	return s.damage.UpdateState(ctx, cur.ID, cur.State, rental.DamageStaffResolved, func(c *rental.DamageClaim) {
+	updated, err := s.damage.UpdateState(ctx, cur.ID, cur.State, rental.DamageStaffResolved, func(c *rental.DamageClaim) {
 		c.DecidedAt = &decidedAt
 		c.StaffDecisionNote = in.Note
 		c.AgreedCents = in.AgreedCents
 		c.ResolvedAt = &decidedAt
 	})
+	if err != nil {
+		return rental.DamageClaim{}, err
+	}
+	// Pilar 3 wire — capture deposit + maybe create debt (Path B).
+	if err := s.wirePilar3OnClaimResolved(ctx, updated, in.AgreedCents); err != nil {
+		return rental.DamageClaim{}, err
+	}
+	return updated, nil
 }
 
 // ExpireStale transitions any open claims whose defense window has

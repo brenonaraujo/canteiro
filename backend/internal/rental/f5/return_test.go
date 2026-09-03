@@ -86,6 +86,21 @@ func (f *fakeReturn) UpdateState(_ context.Context, id string, from, to rental.R
 	return cur, nil
 }
 
+func (f *fakeReturn) Mutate(_ context.Context, id string, mutate func(ret *rental.Return)) (rental.Return, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cur, ok := f.byID[id]
+	if !ok {
+		return rental.Return{}, rental.ErrF5ReturnNotFound
+	}
+	if mutate != nil {
+		mutate(&cur)
+	}
+	cur.UpdatedAt = time.Now().UTC()
+	f.byID[id] = cur
+	return cur, nil
+}
+
 type fakeDamage struct{}
 
 func (fakeDamage) Create(context.Context, rental.DamageClaim) (rental.DamageClaim, error) {

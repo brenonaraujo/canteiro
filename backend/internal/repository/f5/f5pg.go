@@ -246,6 +246,39 @@ func (r *ReturnRepo) byID(ctx context.Context, id string) (rental.Return, error)
 	return toReturn(row), nil
 }
 
+// Mutate runs a non-state-changing update on the return row. Used by
+// the Pilar 3 wire: capturing the deposit + releasing the balance and
+// setting returned_at happen outside the state machine. Mirrors
+// DebtRepo.Mutate. The mutate callback receives the loaded row and may
+// set DepositCapturedCents / DepositReleasedCents / ReturnedAt freely.
+// The repository bumps updated_at and writes all three columns (NULL
+// values are passed through; non-null preservation is the caller's job).
+func (r *ReturnRepo) Mutate(ctx context.Context, id string, mutate func(ret *rental.Return)) (rental.Return, error) {
+	cur, err := r.byID(ctx, id)
+	if err != nil {
+		return rental.Return{}, err
+	}
+	if mutate != nil {
+		mutate(&cur)
+	}
+	cur.UpdatedAt = time.Now().UTC()
+	res := r.DB.WithContext(ctx).Model(&returnRow{}).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"deposit_captured_cents": cur.DepositCapturedCents,
+			"deposit_released_cents": cur.DepositReleasedCents,
+			"returned_at":            cur.ReturnedAt,
+			"updated_at":             cur.UpdatedAt,
+		})
+	if res.Error != nil {
+		return rental.Return{}, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return rental.Return{}, rental.ErrF5ReturnNotFound
+	}
+	return cur, nil
+}
+
 // --- damage --------------------------------------------------------------
 
 // DamageRepo implements the f5.DamageRepository on top of Postgres.

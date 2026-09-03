@@ -139,6 +139,9 @@ func (fakeReturnRepo2) GetByRental(context.Context, string) (rental.Return, bool
 func (fakeReturnRepo2) UpdateState(context.Context, string, rental.ReturnState, rental.ReturnState, func(*rental.Return)) (rental.Return, error) {
 	return rental.Return{}, nil
 }
+func (fakeReturnRepo2) Mutate(context.Context, string, func(*rental.Return)) (rental.Return, error) {
+	return rental.Return{}, nil
+}
 
 // --- helpers ---
 
