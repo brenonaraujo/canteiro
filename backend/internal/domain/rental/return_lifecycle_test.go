@@ -35,12 +35,12 @@ func TestF5StateMachines(t *testing.T) {
 		cases := []struct {
 			from, to rental.ReturnState
 		}{
-			{rental.ReturnAwaitingPickup, rental.ReturnClosed},        // cannot skip pickup
-			{rental.ReturnAwaitingPickup, rental.ReturnContested},      // cannot contest before pickup
-			{rental.ReturnClosed, rental.ReturnInProgress},             // terminal
-			{rental.ReturnClosed, rental.ReturnAwaitingConfirmation},   // terminal
+			{rental.ReturnAwaitingPickup, rental.ReturnClosed},          // cannot skip pickup
+			{rental.ReturnAwaitingPickup, rental.ReturnContested},       // cannot contest before pickup
+			{rental.ReturnClosed, rental.ReturnInProgress},              // terminal
+			{rental.ReturnClosed, rental.ReturnAwaitingConfirmation},    // terminal
 			{rental.ReturnContested, rental.ReturnAwaitingConfirmation}, // cannot un-contest
-			{rental.ReturnContested, rental.ReturnInProgress},          // cannot un-contest
+			{rental.ReturnContested, rental.ReturnInProgress},           // cannot un-contest
 		}
 		for _, c := range cases {
 			if rental.CanReturnTransition(c.from, c.to) {
@@ -73,11 +73,11 @@ func TestF5StateMachines(t *testing.T) {
 		cases := []struct {
 			from, to rental.DamageState
 		}{
-			{rental.DamageOpen, rental.DamageStaffResolved},        // staff cannot resolve without contest
-			{rental.DamageRenterAgreed, rental.DamageContested},    // already agreed
-			{rental.DamageExpired, rental.DamageContested},         // expired is terminal
-			{rental.DamageStaffResolved, rental.DamageContested},  // terminal
-			{rental.DamageCancelled, rental.DamageRenterAgreed},    // terminal
+			{rental.DamageOpen, rental.DamageStaffResolved},      // staff cannot resolve without contest
+			{rental.DamageRenterAgreed, rental.DamageContested},  // already agreed
+			{rental.DamageExpired, rental.DamageContested},       // expired is terminal
+			{rental.DamageStaffResolved, rental.DamageContested}, // terminal
+			{rental.DamageCancelled, rental.DamageRenterAgreed},  // terminal
 		}
 		for _, c := range cases {
 			if rental.CanDamageTransition(c.from, c.to) {

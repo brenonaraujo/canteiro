@@ -1,6 +1,6 @@
 // Package f5pg implements the F5 repository contracts (ReturnRepository,
 // DamageRepository, DebtRepository) on top of PostgreSQL via GORM. The
-// schema lives in migrations/000006_devolucao.{up,down}.sql; the row types
+// schema lives in migrations/000007_devolucao.{up,down}.sql; the row types
 // here mirror that schema 1:1.
 //
 // The three repository types are kept separate because the underlying
@@ -42,6 +42,9 @@ type returnRow struct {
 
 func (returnRow) TableName() string { return "devolucoes" }
 
+// table; alignment is micro-optimization.
+//
+//nolint:govet // fieldalignment: 18-field row mirror of the damage_pedidos
 type damageRow struct {
 	OpenedAt           time.Time  `gorm:"column:opened_at"`
 	DecidedAt          *time.Time `gorm:"column:decided_at"`
@@ -66,6 +69,9 @@ type damageRow struct {
 
 func (damageRow) TableName() string { return "avaria_pedidos" }
 
+// table; alignment is micro-optimization.
+//
+//nolint:govet // fieldalignment: 13-field row mirror of the dividas
 type debtRow struct {
 	CreatedAt      time.Time  `gorm:"column:created_at"`
 	UpdatedAt      time.Time  `gorm:"column:updated_at"`

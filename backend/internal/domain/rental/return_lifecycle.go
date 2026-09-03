@@ -42,11 +42,12 @@ const (
 type DamageNature string
 
 const (
-	// DamageCosmetic: superficial damage that does not affect function.
+	// DamageCosmetic is superficial damage that does not affect function.
 	DamageCosmetic DamageNature = "cosmetic"
-	// DamageFunctional: function is affected but the asset is repairable.
+	// DamageFunctional is damage where function is affected but the asset
+	// is repairable.
 	DamageFunctional DamageNature = "functional"
-	// DamageLoss: the asset is unusable or missing (perda total).
+	// DamageLoss is the asset is unusable or missing (perda total).
 	DamageLoss DamageNature = "loss"
 )
 
@@ -137,8 +138,7 @@ func CanDamageTransition(from, to DamageState) bool {
 
 // CanDebtTransition reports whether a debt can move between states.
 func CanDebtTransition(from, to DebtState) bool {
-	switch from {
-	case DebtOpen:
+	if from == DebtOpen {
 		return to == DebtSettled || to == DebtForgiven
 	}
 	return false

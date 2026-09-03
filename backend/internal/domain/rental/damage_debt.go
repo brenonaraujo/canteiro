@@ -8,17 +8,21 @@ import "time"
 // agreement or by staff mediation. The cap (deposit / declared value) is
 // enforced at the service layer; the row itself only records the agreed
 // values.
+//
+// fields; alignment is micro-optimization.
+//
+//nolint:govet // fieldalignment: 17-field domain entity, mixed pointer/value
 type DamageClaim struct {
-	DecidedAt *time.Time `json:"decided_at,omitempty"`
-	ResolvedAt *time.Time `json:"resolved_at,omitempty"`
-	OpenedAt  time.Time  `json:"opened_at"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	DecidedAt   *time.Time `json:"decided_at,omitempty"`
+	ResolvedAt  *time.Time `json:"resolved_at,omitempty"`
+	OpenedAt    time.Time  `json:"opened_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 	RespondedAt *time.Time `json:"responded_at,omitempty"`
 
-	ID       string      `json:"id"`
-	RentalID string      `json:"rental_id"`
-	State    DamageState `json:"state"`
+	ID       string       `json:"id"`
+	RentalID string       `json:"rental_id"`
+	State    DamageState  `json:"state"`
 	Nature   DamageNature `json:"nature"`
 
 	// OwnerID is denormalized from the rental's listing snapshot so the
@@ -51,8 +55,10 @@ type DamageClaim struct {
 // Debt is the F5 row for an avaria divida ativa (active debt). One per
 // avaria that exceeds the deposit, or one per failed auto-charge attempt.
 // The lifecycle is Open → Settled or Open → Forgiven.
+//
+//nolint:govet // fieldalignment: 13-field domain entity; micro-optimization.
 type Debt struct {
-	SettledAt *time.Time `json:"settled_at,omitempty"`
+	SettledAt  *time.Time `json:"settled_at,omitempty"`
 	ForgivenAt *time.Time `json:"forgiven_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`

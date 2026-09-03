@@ -193,6 +193,25 @@ func (wired) PaymentWebhook(c *gin.Context, _ api.PaymentWebhookParams) {
 	c.Status(http.StatusNotFound)
 }
 
+// F5 stubs (out of scope for auth tests).
+func (wired) RegisterRentalPickup(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) RegisterRentalReturn(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) OpenDamageClaim(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) RespondDamageClaim(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) StaffResolveDamage(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) SettleDebt(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
+func (wired) ForgiveDebt(c *gin.Context, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
+
 func do(r http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
