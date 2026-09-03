@@ -25,18 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 )
-
-// Clock returns the current UTC time. Injected for deterministic
-// tests.
-type Clock interface {
-	Now() time.Time
-}
-
-type realClock struct{}
-
-func (realClock) Now() time.Time { return time.Now().UTC() }
 
 // RentalLookup is the slice of rental.Service the review service
 // needs. Implemented by rental.Service in production (we already
