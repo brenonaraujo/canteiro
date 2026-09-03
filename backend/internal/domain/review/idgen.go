@@ -26,3 +26,8 @@ func (defaultIDGen) String() string {
 	h := hex.EncodeToString(b[:])
 	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
 }
+
+// DefaultIDGen returns the production IDGenerator. Exported so the
+// review_test package can exercise the same code path the service
+// wires in production; service tests use the counter fake.
+func DefaultIDGen() IDGenerator { return defaultIDGen{} }

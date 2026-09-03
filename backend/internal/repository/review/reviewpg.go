@@ -2,12 +2,12 @@
 // avaliação domain. It is consumed by review.Service; fakes in
 // tests live next to the service.
 //
-// The review + aggregate writes happen in a single SQL transaction:
-// INSERT INTO reviews (drives the UNIQUE constraint that surfaces
-// ErrAlreadyReviewed) → INSERT … ON CONFLICT … UPDATE
-// review_aggregates. The migration also installs a trigger that
-// keeps the aggregate consistent — belt-and-braces for any future
-// writer that forgets the upsert.
+// Single source of truth for review_aggregates is the SQL trigger
+// reviews_after_insert_aggregate_sync (migration 000008). The
+// application code does NOT upsert the aggregate on the write path:
+// any such upsert would race the trigger and double-count
+// (RCA: 2026-09-03 QA reprovou). The repo inserts the review and
+// reads back the trigger-maintained aggregate in the same tx.
 package reviewpg
 
 import (
@@ -24,11 +24,26 @@ import (
 
 // Repo is the Postgres-backed review repository.
 type Repo struct {
-	DB *gorm.DB
+	DB  *gorm.DB
+	Now func() time.Time // optional; nil → real clock (testable via WithClock).
 }
 
-// New returns the review repository.
-func New(db *gorm.DB) *Repo { return &Repo{DB: db} }
+// New returns the review repository with a real clock.
+func New(db *gorm.DB) *Repo {
+	return &Repo{DB: db, Now: func() time.Time { return time.Now().UTC() }}
+}
+
+// WithClock returns a copy of the receiver whose clock is replaced.
+// The repo is otherwise unchanged — useful in integration tests so
+// the CreatedAt fallback can be pinned without touching production
+// code (see InsertReviewWithAggregate).
+func (r *Repo) WithClock(now func() time.Time) *Repo {
+	cp := *r
+	if now != nil {
+		cp.Now = now
+	}
+	return &cp
+}
 
 // reviewRow mirrors the reviews table (migration 000008).
 type reviewRow struct {
@@ -72,14 +87,19 @@ func isUniqueViolation(err error) bool {
 		strings.Contains(msg, "duplicate key value violates unique constraint")
 }
 
-// InsertReviewWithAggregate implements review.Repository. It runs the
-// insert and the aggregate upsert inside a single transaction.
+// InsertReviewWithAggregate implements review.Repository. The review
+// is inserted inside a single transaction; the SQL trigger
+// reviews_after_insert_aggregate_sync (migration 000008) is the
+// single source of truth for the (ratee, scope) aggregate, so this
+// function only inserts the review and reads the post-trigger
+// aggregate back. It deliberately does NOT upsert the aggregate
+// itself — any such write races the trigger (AFTER INSERT, same tx)
+// and double-counts. The QA round of 2026-09-03 caught exactly that
+// bug. See issue #8, BLOQ 1.
 //
-// The repo reads the current aggregate inside the tx (for the
-// updated-at / count bookkeeping the API will surface), upserts the
-// new values, and returns the persisted review + the new aggregate
-// state. The trigger on reviews (migration 000008) is a redundant
-// backstop — application writes are the primary path.
+// in.NewAggregate is preserved on the signature for caller-side
+// backward compatibility; its fields are ignored — the returned
+// ReviewAggregate is the trigger's authoritative value.
 func (r *Repo) InsertReviewWithAggregate(ctx context.Context, in review.ReviewWithAggregateInput) (review.Review, review.ReviewAggregate, error) {
 	if in.Review.RateeUserID == "" && in.Review.Scope != review.ScopeListing {
 		return review.Review{}, review.ReviewAggregate{}, errors.New("reviewpg: ratee_user_id required for non-listing scope")
@@ -87,12 +107,12 @@ func (r *Repo) InsertReviewWithAggregate(ctx context.Context, in review.ReviewWi
 	var out review.Review
 	var newAgg review.ReviewAggregate
 	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		persisted, err := insertReviewRow(tx, in.Review)
+		persisted, err := insertReviewRow(tx, in.Review, r.Now)
 		if err != nil {
 			return err
 		}
 		out = persisted
-		agg, err := upsertAggregate(tx, in.Review)
+		agg, err := readAggregate(tx, in.Review.RateeUserID, in.Review.Scope)
 		if err != nil {
 			return err
 		}
@@ -106,8 +126,11 @@ func (r *Repo) InsertReviewWithAggregate(ctx context.Context, in review.ReviewWi
 }
 
 // insertReviewRow persists the review row and returns the value
-// stamped with the DB-side created_at.
-func insertReviewRow(tx *gorm.DB, in review.Review) (review.Review, error) {
+// stamped with the DB-side created_at. When GORM does not hydrate
+// created_at from the DB-side default (older GORM versions,
+// pre-INSERT RETURNING), the now clock is used as a deterministic
+// fallback. nil now is allowed and degrades to time.Now().
+func insertReviewRow(tx *gorm.DB, in review.Review, now func() time.Time) (review.Review, error) {
 	row := reviewRow{
 		ID: in.ID, RentalID: in.RentalID, RaterID: in.RaterUserID,
 		Scope: string(in.Scope), Score: in.Score, Comment: in.Comment,
@@ -123,7 +146,11 @@ func insertReviewRow(tx *gorm.DB, in review.Review) (review.Review, error) {
 		return review.Review{}, err
 	}
 	if row.CreatedAt.IsZero() {
-		row.CreatedAt = time.Now().UTC()
+		if now != nil {
+			row.CreatedAt = now()
+		} else {
+			row.CreatedAt = time.Now().UTC()
+		}
 	}
 	return review.Review{
 		ID: row.ID, RentalID: row.RentalID, RaterUserID: row.RaterID,
@@ -132,33 +159,29 @@ func insertReviewRow(tx *gorm.DB, in review.Review) (review.Review, error) {
 	}, nil
 }
 
-// upsertAggregate reads the current (ratee, scope) aggregate,
-// merges the new score, and writes the result. Listing scope has
-// no user aggregate; we return a zero aggregate to keep the API
-// contract uniform.
-func upsertAggregate(tx *gorm.DB, in review.Review) (review.ReviewAggregate, error) {
-	if in.Scope == review.ScopeListing || in.RateeUserID == "" {
-		return review.ReviewAggregate{Scope: review.ScopeListing}, nil
+// readAggregate fetches the (ratee, scope) aggregate as left by the
+// reviews_after_insert_aggregate_sync trigger. Listing scope has no
+// user aggregate; we return a zero aggregate so the API surface stays
+// uniform. Reads always observe the post-trigger value because
+// AFTER INSERT fires before the surrounding transaction commits.
+func readAggregate(tx *gorm.DB, rateeUserID string, scope review.Scope) (review.ReviewAggregate, error) {
+	if scope == review.ScopeListing || rateeUserID == "" {
+		return review.ReviewAggregate{RateeUserID: rateeUserID, Scope: scope}, nil
 	}
-	var prev aggregateRow
-	txErr := tx.Where("ratee_user_id = ? AND scope = ?", in.RateeUserID, in.Scope).
-		Take(&prev).Error
-	if txErr != nil && !errors.Is(txErr, gorm.ErrRecordNotFound) {
+	var row aggregateRow
+	txErr := tx.Where("ratee_user_id = ? AND scope = ?", rateeUserID, string(scope)).
+		Take(&row).Error
+	if errors.Is(txErr, gorm.ErrRecordNotFound) {
+		// Trigger runs ON EVERY ROW (incl. listing→ no-op). For a
+		// user scope this branch is unreachable in the create
+		// path, but we keep a graceful miss in case future writers
+		// delete the row out from under us.
+		return review.ReviewAggregate{RateeUserID: rateeUserID, Scope: scope}, nil
+	}
+	if txErr != nil {
 		return review.ReviewAggregate{}, txErr
 	}
-	newCount := prev.Count + 1
-	newSum := prev.Sum + int64(in.Score)
-	upsert := aggregateRow{
-		RateeID: in.RateeUserID, Scope: string(in.Scope),
-		Count: newCount, Sum: newSum,
-		Avg: review.Compute(newCount, newSum), UpdatedAt: time.Now().UTC(),
-	}
-	// GORM Save on a multi-column PK uses INSERT … ON CONFLICT —
-	// covers fresh and existing aggregate rows in one statement.
-	if err := tx.Save(&upsert).Error; err != nil {
-		return review.ReviewAggregate{}, err
-	}
-	return review.NewAggregate(upsert.RateeID, review.Scope(upsert.Scope), upsert.Count, upsert.Sum), nil
+	return review.NewAggregate(row.RateeID, review.Scope(row.Scope), row.Count, row.Sum), nil
 }
 
 // ListByRatee implements review.Repository. limit/offset are enforced

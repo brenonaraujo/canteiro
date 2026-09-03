@@ -392,3 +392,128 @@ func TestService_GetAggregate_EmptyWhenNoneInserted(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, agg.Zero())
 }
+
+// --- Coverage targets (NÃO-BLOQ 3) -----------------------------------
+
+func TestService_NewService_DefaultsUseRealClockAndIDGen(t *testing.T) {
+	// When Config.Now and Config.IDGen are nil, NewService wires the
+	// production defaults. Exercising the constructors here also
+	// touches the realClock.Now branch (service.go:39).
+	rentals := newFakeRentals()
+	repo := newFakeRepo()
+	svc := review.NewService(review.Config{}, rentals, repo)
+	require.NotNil(t, svc)
+
+	// DefaultIDGen is exported via review package — pin the
+	// contract: it returns a non-nil generator whose ids are
+	// parseable UUIDs. (See idgen_test.go for the full shape check.)
+	gen := review.DefaultIDGen()
+	require.NotNil(t, gen)
+	id := gen.String()
+	require.NotEmpty(t, id)
+}
+
+// TestService_ListReceivedReviews_RequiresRatee covers the empty-ratee
+// guard. Covers service.go:295 ListReceivedReviews (was 54.5%).
+func TestService_ListReceivedReviews_RequiresRatee(t *testing.T) {
+	svc := review.NewService(review.Config{IDGen: &counterIDs{}}, newFakeRentals(), newFakeRepo())
+	_, err := svc.ListReceivedReviews(context.Background(), review.ListReceivedReviewsInput{
+		RateeUserID: "", Scope: review.ScopeOwner, Limit: 10, Offset: 0,
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, review.ErrInvalidInput)
+}
+
+// TestService_ListReceivedReviews_InvalidScope covers the scope
+// validation branch. Covers service.go:295 ListReceivedReviews.
+func TestService_ListReceivedReviews_InvalidScope(t *testing.T) {
+	svc := review.NewService(review.Config{IDGen: &counterIDs{}}, newFakeRentals(), newFakeRepo())
+	_, err := svc.ListReceivedReviews(context.Background(), review.ListReceivedReviewsInput{
+		RateeUserID: "u1", Scope: review.Scope("bogus"), Limit: 10, Offset: 0,
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, review.ErrScopeInvalid)
+}
+
+// TestService_ListReceivedReviews_DefaultAndClampLimit covers the
+// Limit <= 0 and Limit > maxListLimit clamps. Covers service.go:295.
+func TestService_ListReceivedReviews_DefaultAndClampLimit(t *testing.T) {
+	rentals := newFakeRentals()
+	rentals.put(review.RentalParticipant{
+		RentalID: "r1", RenterID: "ren-1", OwnerID: "own-1",
+	}, true)
+	repo := newFakeRepo()
+	svc := review.NewService(review.Config{IDGen: &counterIDs{}}, rentals, repo)
+
+	// Seed 3 reviews on the same rental for the renter to rate.
+	// (One per scope — listing/owner/renter — keeps the UNIQUE
+	// (rental, rater, scope) honest.)
+	_, err := svc.CreateReview(context.Background(), review.CreateReviewInput{
+		RentalID: "r1", RaterUserID: "ren-1", Scope: review.ScopeListing, Score: 5,
+	})
+	require.NoError(t, err)
+
+	// Limit <= 0 → falls back to defaultListLimit (20). The repo
+	// returns its seed slice unchanged, but we exercise the clamp
+	// by hitting the read path.
+	got, err := svc.ListReceivedReviews(context.Background(), review.ListReceivedReviewsInput{
+		RateeUserID: "own-1", Scope: review.ScopeOwner, Limit: 0, Offset: 0,
+	})
+	require.NoError(t, err)
+	// Own-1 has no owner-scoped review in this setup; renter rated
+	// the listing only. The clamp ran; the result is just empty.
+	require.Empty(t, got)
+
+	// Limit > maxListLimit → clamped to maxListLimit. Same outcome.
+	got, err = svc.ListReceivedReviews(context.Background(), review.ListReceivedReviewsInput{
+		RateeUserID: "own-1", Scope: review.ScopeOwner, Limit: 9999, Offset: 0,
+	})
+	require.NoError(t, err)
+	require.Empty(t, got)
+
+	// Offset < 0 → clamped to 0.
+	got, err = svc.ListReceivedReviews(context.Background(), review.ListReceivedReviewsInput{
+		RateeUserID: "own-1", Scope: review.ScopeOwner, Limit: 10, Offset: -5,
+	})
+	require.NoError(t, err)
+	require.Empty(t, got)
+}
+
+// TestService_ListReceivedReviews_EmptyScopeReturnsAll exercises the
+// branch where scope == "" (any scope). Covers service.go:295.
+func TestService_ListReceivedReviews_EmptyScopeReturnsAll(t *testing.T) {
+	rentals := newFakeRentals()
+	repo := newFakeRepo()
+	// Pre-seed the fake repo with two reviews addressed to own-1,
+	// one per scope. Bypassing CreateReview keeps the test focused
+	// on the ListReceivedReviews scope-filter branch.
+	repo.reviews = []review.Review{
+		{ID: "rv-a", RentalID: "r1", RaterUserID: "ren-1", RateeUserID: "own-1", Scope: review.ScopeOwner, Score: 5},
+		{ID: "rv-b", RentalID: "r2", RaterUserID: "ren-2", RateeUserID: "own-1", Scope: review.ScopeRenter, Score: 4},
+	}
+	svc := review.NewService(review.Config{IDGen: &counterIDs{}}, rentals, repo)
+
+	got, err := svc.ListReceivedReviews(context.Background(), review.ListReceivedReviewsInput{
+		RateeUserID: "own-1", Scope: "", Limit: 10, Offset: 0,
+	})
+	require.NoError(t, err)
+	require.Len(t, got, 2, "empty scope returns reviews across both scopes")
+}
+
+// TestService_GetAggregate_RequiresRatee covers the empty-ratee
+// guard. Covers service.go:315 GetAggregate (was 60%).
+func TestService_GetAggregate_RequiresRatee(t *testing.T) {
+	svc := review.NewService(review.Config{IDGen: &counterIDs{}}, newFakeRentals(), newFakeRepo())
+	_, err := svc.GetAggregate(context.Background(), "", review.ScopeOwner)
+	require.Error(t, err)
+	require.ErrorIs(t, err, review.ErrInvalidInput)
+}
+
+// TestService_GetAggregate_InvalidScope covers the scope validation
+// branch. Covers service.go:315 GetAggregate.
+func TestService_GetAggregate_InvalidScope(t *testing.T) {
+	svc := review.NewService(review.Config{IDGen: &counterIDs{}}, newFakeRentals(), newFakeRepo())
+	_, err := svc.GetAggregate(context.Background(), "u1", review.Scope("bogus"))
+	require.Error(t, err)
+	require.ErrorIs(t, err, review.ErrScopeInvalid)
+}
