@@ -23,6 +23,7 @@ import (
 // Defines values for AccountStatus.
 const (
 	Active      AccountStatus = "active"
+	Blocked     AccountStatus = "blocked"
 	Deactivated AccountStatus = "deactivated"
 	Incomplete  AccountStatus = "incomplete"
 )
@@ -32,9 +33,35 @@ func (e AccountStatus) Valid() bool {
 	switch e {
 	case Active:
 		return true
+	case Blocked:
+		return true
 	case Deactivated:
 		return true
 	case Incomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateRentalCancellationRequestActorKind.
+const (
+	CreateRentalCancellationRequestActorKindOperator CreateRentalCancellationRequestActorKind = "operator"
+	CreateRentalCancellationRequestActorKindOwner    CreateRentalCancellationRequestActorKind = "owner"
+	CreateRentalCancellationRequestActorKindPlatform CreateRentalCancellationRequestActorKind = "platform"
+	CreateRentalCancellationRequestActorKindTenant   CreateRentalCancellationRequestActorKind = "tenant"
+)
+
+// Valid indicates whether the value is a known member of the CreateRentalCancellationRequestActorKind enum.
+func (e CreateRentalCancellationRequestActorKind) Valid() bool {
+	switch e {
+	case CreateRentalCancellationRequestActorKindOperator:
+		return true
+	case CreateRentalCancellationRequestActorKindOwner:
+		return true
+	case CreateRentalCancellationRequestActorKindPlatform:
+		return true
+	case CreateRentalCancellationRequestActorKindTenant:
 		return true
 	default:
 		return false
@@ -194,11 +221,37 @@ func (e PaymentIntentStatus) Valid() bool {
 	}
 }
 
+// Defines values for PaymentWebhookEventDataDepositState.
+const (
+	PaymentWebhookEventDataDepositStateCaptured PaymentWebhookEventDataDepositState = "captured"
+	PaymentWebhookEventDataDepositStatePartial  PaymentWebhookEventDataDepositState = "partial"
+	PaymentWebhookEventDataDepositStateReleased PaymentWebhookEventDataDepositState = "released"
+)
+
+// Valid indicates whether the value is a known member of the PaymentWebhookEventDataDepositState enum.
+func (e PaymentWebhookEventDataDepositState) Valid() bool {
+	switch e {
+	case PaymentWebhookEventDataDepositStateCaptured:
+		return true
+	case PaymentWebhookEventDataDepositStatePartial:
+		return true
+	case PaymentWebhookEventDataDepositStateReleased:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PaymentWebhookEventType.
 const (
-	PaymentAuthorized PaymentWebhookEventType = "payment.authorized"
-	PaymentFailed     PaymentWebhookEventType = "payment.failed"
-	PaymentRefunded   PaymentWebhookEventType = "payment.refunded"
+	PaymentAuthorized             PaymentWebhookEventType = "payment.authorized"
+	PaymentChargebackCreated      PaymentWebhookEventType = "payment.chargeback_created"
+	PaymentDepositCaptured        PaymentWebhookEventType = "payment.deposit_captured"
+	PaymentDepositPartialCaptured PaymentWebhookEventType = "payment.deposit_partial_captured"
+	PaymentDepositReleased        PaymentWebhookEventType = "payment.deposit_released"
+	PaymentFailed                 PaymentWebhookEventType = "payment.failed"
+	PaymentRefundSettled          PaymentWebhookEventType = "payment.refund_settled"
+	PaymentRefunded               PaymentWebhookEventType = "payment.refunded"
 )
 
 // Valid indicates whether the value is a known member of the PaymentWebhookEventType enum.
@@ -206,7 +259,17 @@ func (e PaymentWebhookEventType) Valid() bool {
 	switch e {
 	case PaymentAuthorized:
 		return true
+	case PaymentChargebackCreated:
+		return true
+	case PaymentDepositCaptured:
+		return true
+	case PaymentDepositPartialCaptured:
+		return true
+	case PaymentDepositReleased:
+		return true
 	case PaymentFailed:
+		return true
+	case PaymentRefundSettled:
 		return true
 	case PaymentRefunded:
 		return true
@@ -251,21 +314,120 @@ func (e ReadyResponseStatus) Valid() bool {
 	}
 }
 
+// Defines values for RentalCancellationActorKind.
+const (
+	RentalCancellationActorKindOperator RentalCancellationActorKind = "operator"
+	RentalCancellationActorKindOwner    RentalCancellationActorKind = "owner"
+	RentalCancellationActorKindPlatform RentalCancellationActorKind = "platform"
+	RentalCancellationActorKindTenant   RentalCancellationActorKind = "tenant"
+)
+
+// Valid indicates whether the value is a known member of the RentalCancellationActorKind enum.
+func (e RentalCancellationActorKind) Valid() bool {
+	switch e {
+	case RentalCancellationActorKindOperator:
+		return true
+	case RentalCancellationActorKindOwner:
+		return true
+	case RentalCancellationActorKindPlatform:
+		return true
+	case RentalCancellationActorKindTenant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RentalCancellationStateDeposit.
+const (
+	RentalCancellationStateDepositCaptured RentalCancellationStateDeposit = "captured"
+	RentalCancellationStateDepositHeld     RentalCancellationStateDeposit = "held"
+	RentalCancellationStateDepositPartial  RentalCancellationStateDeposit = "partial"
+	RentalCancellationStateDepositReleased RentalCancellationStateDeposit = "released"
+)
+
+// Valid indicates whether the value is a known member of the RentalCancellationStateDeposit enum.
+func (e RentalCancellationStateDeposit) Valid() bool {
+	switch e {
+	case RentalCancellationStateDepositCaptured:
+		return true
+	case RentalCancellationStateDepositHeld:
+		return true
+	case RentalCancellationStateDepositPartial:
+		return true
+	case RentalCancellationStateDepositReleased:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RentalReceiptActorKind.
+const (
+	RentalReceiptActorKindOperator RentalReceiptActorKind = "operator"
+	RentalReceiptActorKindOwner    RentalReceiptActorKind = "owner"
+	RentalReceiptActorKindPlatform RentalReceiptActorKind = "platform"
+	RentalReceiptActorKindTenant   RentalReceiptActorKind = "tenant"
+)
+
+// Valid indicates whether the value is a known member of the RentalReceiptActorKind enum.
+func (e RentalReceiptActorKind) Valid() bool {
+	switch e {
+	case RentalReceiptActorKindOperator:
+		return true
+	case RentalReceiptActorKindOwner:
+		return true
+	case RentalReceiptActorKindPlatform:
+		return true
+	case RentalReceiptActorKindTenant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RentalReceiptDepositState.
+const (
+	RentalReceiptDepositStateCaptured RentalReceiptDepositState = "captured"
+	RentalReceiptDepositStateHeld     RentalReceiptDepositState = "held"
+	RentalReceiptDepositStatePartial  RentalReceiptDepositState = "partial"
+	RentalReceiptDepositStateReleased RentalReceiptDepositState = "released"
+)
+
+// Valid indicates whether the value is a known member of the RentalReceiptDepositState enum.
+func (e RentalReceiptDepositState) Valid() bool {
+	switch e {
+	case RentalReceiptDepositStateCaptured:
+		return true
+	case RentalReceiptDepositStateHeld:
+		return true
+	case RentalReceiptDepositStatePartial:
+		return true
+	case RentalReceiptDepositStateReleased:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RentalState.
 const (
-	RentalStateAuthorized RentalState = "authorized"
-	RentalStateCancelled  RentalState = "cancelled"
-	RentalStateConfirmed  RentalState = "confirmed"
-	RentalStateDeclined   RentalState = "declined"
-	RentalStateExpired    RentalState = "expired"
-	RentalStatePending    RentalState = "pending"
-	RentalStateRefunded   RentalState = "refunded"
+	RentalStateAuthorized             RentalState = "authorized"
+	RentalStateCancellationInProgress RentalState = "cancellation_in_progress"
+	RentalStateCancelled              RentalState = "cancelled"
+	RentalStateConfirmed              RentalState = "confirmed"
+	RentalStateDeclined               RentalState = "declined"
+	RentalStateExpired                RentalState = "expired"
+	RentalStatePending                RentalState = "pending"
+	RentalStateRefunded               RentalState = "refunded"
 )
 
 // Valid indicates whether the value is a known member of the RentalState enum.
 func (e RentalState) Valid() bool {
 	switch e {
 	case RentalStateAuthorized:
+		return true
+	case RentalStateCancellationInProgress:
 		return true
 	case RentalStateCancelled:
 		return true
@@ -350,6 +512,21 @@ type CreateListingRequest struct {
 	Rules              *ListingRules    `json:"rules,omitempty"`
 	Title              string           `json:"title"`
 }
+
+// CreateRentalCancellationRequest defines model for CreateRentalCancellationRequest.
+type CreateRentalCancellationRequest struct {
+	ActorKind CreateRentalCancellationRequestActorKind `json:"actor_kind"`
+
+	// ProcessorOperationId Optional PSP-side operation id that triggered the
+	// cancellation (refund, chargeback). When the request comes
+	// from a webhook handler, this is the event id; idempotent
+	// on (rental_id, actor_kind, processor_operation_id).
+	ProcessorOperationId *string `json:"processor_operation_id,omitempty"`
+	Reason               *string `json:"reason,omitempty"`
+}
+
+// CreateRentalCancellationRequestActorKind defines model for CreateRentalCancellationRequest.ActorKind.
+type CreateRentalCancellationRequestActorKind string
 
 // CreateRentalRequest defines model for CreateRentalRequest.
 type CreateRentalRequest struct {
@@ -523,16 +700,29 @@ type PaymentIntentStatus string
 // PaymentWebhookEvent defines model for PaymentWebhookEvent.
 type PaymentWebhookEvent struct {
 	Data struct {
-		AmountCents     int                 `json:"amount_cents"`
-		DepositCents    *int                `json:"deposit_cents,omitempty"`
-		FailureCode     *string             `json:"failure_code,omitempty"`
-		FailureMessage  *string             `json:"failure_message,omitempty"`
-		PaymentIntentId *openapi_types.UUID `json:"payment_intent_id,omitempty"`
-		RentalId        openapi_types.UUID  `json:"rental_id"`
+		AmountCents int `json:"amount_cents"`
+
+		// ChargebackReason Set only on chargeback events.
+		ChargebackReason *string `json:"chargeback_reason,omitempty"`
+		DepositCents     *int    `json:"deposit_cents,omitempty"`
+
+		// DepositState F4 deposit event — only set for deposit.* and
+		// refund_settled/chargeback events. Required for
+		// deposit events; ignored otherwise.
+		DepositState    *PaymentWebhookEventDataDepositState `json:"deposit_state,omitempty"`
+		FailureCode     *string                              `json:"failure_code,omitempty"`
+		FailureMessage  *string                              `json:"failure_message,omitempty"`
+		PaymentIntentId *openapi_types.UUID                  `json:"payment_intent_id,omitempty"`
+		RentalId        openapi_types.UUID                   `json:"rental_id"`
 	} `json:"data"`
 	Id   string                  `json:"id"`
 	Type PaymentWebhookEventType `json:"type"`
 }
+
+// PaymentWebhookEventDataDepositState F4 deposit event — only set for deposit.* and
+// refund_settled/chargeback events. Required for
+// deposit events; ignored otherwise.
+type PaymentWebhookEventDataDepositState string
 
 // PaymentWebhookEventType defines model for PaymentWebhookEvent.Type.
 type PaymentWebhookEventType string
@@ -615,6 +805,36 @@ type Rental struct {
 	WithOperator          bool               `json:"with_operator"`
 }
 
+// RentalCancellation defines model for RentalCancellation.
+type RentalCancellation struct {
+	ActorAccountId                       openapi_types.UUID          `json:"actor_account_id"`
+	ActorKind                            RentalCancellationActorKind `json:"actor_kind"`
+	CancellationFeeCents                 int                         `json:"cancellation_fee_cents"`
+	DepositCaptureCents                  int                         `json:"deposit_capture_cents"`
+	DepositPartialCaptureCents           int                         `json:"deposit_partial_capture_cents"`
+	DepositReleaseCents                  int                         `json:"deposit_release_cents"`
+	Id                                   openapi_types.UUID          `json:"id"`
+	IssuedAt                             time.Time                   `json:"issued_at"`
+	OperatorPayoutCentsAfterCancellation int                         `json:"operator_payout_cents_after_cancellation"`
+	OwnerPayoutCentsAfterCancellation    int                         `json:"owner_payout_cents_after_cancellation"`
+	ProcessorOperationId                 *string                     `json:"processor_operation_id,omitempty"`
+	RentalId                             openapi_types.UUID          `json:"rental_id"`
+
+	// ReversalReason Set when this cancellation is a chargeback reversal.
+	ReversalReason    *string                        `json:"reversal_reason,omitempty"`
+	StateDeposit      RentalCancellationStateDeposit `json:"state_deposit"`
+	TenantRefundCents int                            `json:"tenant_refund_cents"`
+
+	// WindowApplied Declarative F4 window code (see RentalReceipt.window_applied).
+	WindowApplied string `json:"window_applied"`
+}
+
+// RentalCancellationActorKind defines model for RentalCancellation.ActorKind.
+type RentalCancellationActorKind string
+
+// RentalCancellationStateDeposit defines model for RentalCancellation.StateDeposit.
+type RentalCancellationStateDeposit string
+
 // RentalQuoteOut defines model for RentalQuoteOut.
 type RentalQuoteOut struct {
 	CommissionBaseCents int                `json:"commission_base_cents"`
@@ -630,21 +850,61 @@ type RentalQuoteOut struct {
 
 // RentalReceipt defines model for RentalReceipt.
 type RentalReceipt struct {
-	CommissionBaseCents int                `json:"commission_base_cents"`
-	CommissionCents     int                `json:"commission_cents"`
-	DepositCents        int                `json:"deposit_cents"`
-	IssuedAt            time.Time          `json:"issued_at"`
-	ListingSnapshot     ListingSnapshot    `json:"listing_snapshot"`
-	OperatorCents       int                `json:"operator_cents"`
-	OperatorPayoutCents int                `json:"operator_payout_cents"`
-	OwnerPayoutCents    int                `json:"owner_payout_cents"`
-	RentCents           int                `json:"rent_cents"`
-	RentalId            openapi_types.UUID `json:"rental_id"`
-	TenantAccountId     openapi_types.UUID `json:"tenant_account_id"`
-	TotalCents          int                `json:"total_cents"`
-	WindowEndsAt        time.Time          `json:"window_ends_at"`
-	WindowStartsAt      time.Time          `json:"window_starts_at"`
+	// ActorKind Who triggered the cancellation (F4). Empty when no cancellation.
+	ActorKind *RentalReceiptActorKind `json:"actor_kind,omitempty"`
+
+	// CancellationFeeCents F4 cancellation fee (10% of rent in the >=24h window).
+	CancellationFeeCents       *int       `json:"cancellation_fee_cents,omitempty"`
+	CancellationIssuedAt       *time.Time `json:"cancellation_issued_at,omitempty"`
+	CommissionBaseCents        int        `json:"commission_base_cents"`
+	CommissionCents            int        `json:"commission_cents"`
+	DepositCaptureCents        *int       `json:"deposit_capture_cents,omitempty"`
+	DepositCents               int        `json:"deposit_cents"`
+	DepositPartialCaptureCents *int       `json:"deposit_partial_capture_cents,omitempty"`
+	DepositReleaseCents        *int       `json:"deposit_release_cents,omitempty"`
+
+	// DepositState F4 deposit state in the receipt: released (default), captured
+	// (fully), partial (partially), held (still held; F5 will decide).
+	DepositState        *RentalReceiptDepositState `json:"deposit_state,omitempty"`
+	IssuedAt            time.Time                  `json:"issued_at"`
+	ListingSnapshot     ListingSnapshot            `json:"listing_snapshot"`
+	OperatorCents       int                        `json:"operator_cents"`
+	OperatorPayoutCents int                        `json:"operator_payout_cents"`
+
+	// OperatorPayoutCentsAfterCancellation Operator payout (third-party operator; zero when operator=owner).
+	OperatorPayoutCentsAfterCancellation *int `json:"operator_payout_cents_after_cancellation,omitempty"`
+	OwnerPayoutCents                     int  `json:"owner_payout_cents"`
+
+	// OwnerPayoutCentsAfterCancellation Owner payout net of commission (zero when rent fully refunded).
+	OwnerPayoutCentsAfterCancellation *int `json:"owner_payout_cents_after_cancellation,omitempty"`
+
+	// ProcessorOperationId PSP-side operation id (refund, chargeback, deposit capture).
+	ProcessorOperationId *string            `json:"processor_operation_id,omitempty"`
+	RentCents            int                `json:"rent_cents"`
+	RentalId             openapi_types.UUID `json:"rental_id"`
+	TenantAccountId      openapi_types.UUID `json:"tenant_account_id"`
+
+	// TenantRefundCents Net amount refunded to the tenant after fee + commission.
+	TenantRefundCents *int `json:"tenant_refund_cents,omitempty"`
+	TotalCents        int  `json:"total_cents"`
+
+	// WindowApplied F4 declarative window code (e.g. "tenant.pre_accept",
+	// "tenant.ge_24h", "tenant.lt_24h", "tenant.after_start",
+	// "owner.pre_pickup", "owner.after_start").
+	//
+	//
+	// Example: tenant.ge_24h
+	WindowApplied  *string   `json:"window_applied,omitempty"`
+	WindowEndsAt   time.Time `json:"window_ends_at"`
+	WindowStartsAt time.Time `json:"window_starts_at"`
 }
+
+// RentalReceiptActorKind Who triggered the cancellation (F4). Empty when no cancellation.
+type RentalReceiptActorKind string
+
+// RentalReceiptDepositState F4 deposit state in the receipt: released (default), captured
+// (fully), partial (partially), held (still held; F5 will decide).
+type RentalReceiptDepositState string
 
 // RentalState defines model for RentalState.
 type RentalState string
@@ -760,6 +1020,9 @@ type PaymentWebhookJSONRequestBody = PaymentWebhookEvent
 // CreateRentalJSONRequestBody defines body for CreateRental for application/json ContentType.
 type CreateRentalJSONRequestBody = CreateRentalRequest
 
+// CreateRentalCancellationJSONRequestBody defines body for CreateRentalCancellation for application/json ContentType.
+type CreateRentalCancellationJSONRequestBody = CreateRentalCancellationRequest
+
 // DeclineRentalJSONRequestBody defines body for DeclineRental for application/json ContentType.
 type DeclineRentalJSONRequestBody = DeclineRentalRequest
 
@@ -855,6 +1118,12 @@ type ServerInterface interface {
 	// CancelRental Cancel the rental pre-acceptance (tenant)
 	// (POST /rentals/{id}/cancel)
 	CancelRental(c *gin.Context, id openapi_types.UUID)
+	// GetRentalCancellation Get the cancellation record (immutable, both parties)
+	// (GET /rentals/{id}/cancellations)
+	GetRentalCancellation(c *gin.Context, id openapi_types.UUID)
+	// CreateRentalCancellation Cancel a rental (tenant, owner, or platform)
+	// (POST /rentals/{id}/cancellations)
+	CreateRentalCancellation(c *gin.Context, id openapi_types.UUID)
 	// DeclineRental Decline the rental (owner)
 	// (POST /rentals/{id}/decline)
 	DeclineRental(c *gin.Context, id openapi_types.UUID)
@@ -1551,6 +1820,56 @@ func (siw *ServerInterfaceWrapper) CancelRental(c *gin.Context) {
 	siw.Handler.CancelRental(c, id)
 }
 
+// GetRentalCancellation operation middleware
+func (siw *ServerInterfaceWrapper) GetRentalCancellation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRentalCancellation(c, id)
+}
+
+// CreateRentalCancellation operation middleware
+func (siw *ServerInterfaceWrapper) CreateRentalCancellation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateRentalCancellation(c, id)
+}
+
 // DeclineRental operation middleware
 func (siw *ServerInterfaceWrapper) DeclineRental(c *gin.Context) {
 
@@ -1659,6 +1978,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/rentals/:id/decline", wrapper.DeclineRental)
 	router.POST(options.BaseURL+"/rentals/:id/cancel", wrapper.CancelRental)
 	router.GET(options.BaseURL+"/rentals/:id/receipt", wrapper.GetRentalReceipt)
+	router.GET(options.BaseURL+"/rentals/:id/cancellations", wrapper.GetRentalCancellation)
+	router.POST(options.BaseURL+"/rentals/:id/cancellations", wrapper.CreateRentalCancellation)
 	router.POST(options.BaseURL+"/payments/webhook", wrapper.PaymentWebhook)
 }
 
@@ -1667,115 +1988,140 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"Pb/7dPd/AQAA//8=",
+	"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",
+	"//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

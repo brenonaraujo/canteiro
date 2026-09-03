@@ -33,6 +33,8 @@ type RentalService interface {
 	Decline(ctx context.Context, in rentsvc.DeclineInput) (rental.Rental, error)
 	CancelPreAuth(ctx context.Context, in rentsvc.CancelPreAuthInput) (rental.Rental, error)
 	GetReceipt(ctx context.Context, rentalID, tenantID string) (rental.Receipt, error)
+	Cancel(ctx context.Context, in rentsvc.CancelInput) (rentsvc.CancellationResult, error)
+	GetCancellation(ctx context.Context, rentalID, callerAccountID string) (rentsvc.CancellationRecord, error)
 }
 
 // NewRentalAPI builds the rental adapter.
@@ -339,7 +341,7 @@ func (h *RentalAPI) DeclineRental(c *gin.Context, id openapi_types.UUID) {
 	c.JSON(http.StatusOK, rentalToAPI(r))
 }
 
-// CancelRental implements api.CancelRental.
+// CancelRental implements api.CancelRental (F3 legacy — pre-authorisation cancel).
 func (h *RentalAPI) CancelRental(c *gin.Context, id openapi_types.UUID) {
 	tenantID, ok := h.requireSession(c)
 	if !ok {
@@ -354,6 +356,93 @@ func (h *RentalAPI) CancelRental(c *gin.Context, id openapi_types.UUID) {
 		return
 	}
 	c.JSON(http.StatusOK, rentalToAPI(r))
+}
+
+// CreateRentalCancellation implements api.CreateRentalCancellation (F4).
+// POST /rentals/{id}/cancellations — tenant, owner, or platform.
+func (h *RentalAPI) CreateRentalCancellation(c *gin.Context, id openapi_types.UUID) {
+	callerID, ok := h.requireSession(c)
+	if !ok {
+		return
+	}
+	var req api.CreateRentalCancellationRequest
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		h.writeErr(c, http.StatusBadRequest, "invalid_request", "rental.invalid_payload")
+		return
+	}
+	actorKind := rental.ActorKind(string(req.ActorKind))
+	res, err := h.svc.Cancel(c.Request.Context(), rentsvc.CancelInput{
+		CallerAccountID: callerID,
+		RentalID:        id.String(),
+		ActorKind:       actorKind,
+		Reason:          reasonFromPtr(req.Reason),
+	})
+	if err != nil {
+		h.writeServiceErr(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, cancellationToAPI(res.Cancellation, res.Rental))
+}
+
+// GetRentalCancellation implements api.GetRentalCancellation (F4).
+// GET /rentals/{id}/cancellations — both tenant and owner; 404 when
+// no cancellation exists yet.
+func (h *RentalAPI) GetRentalCancellation(c *gin.Context, id openapi_types.UUID) {
+	callerID, ok := h.requireSession(c)
+	if !ok {
+		return
+	}
+	rec, err := h.svc.GetCancellation(c.Request.Context(), id.String(), callerID)
+	if err != nil {
+		h.writeServiceErr(c, err)
+		return
+	}
+	r, err := h.svc.Get(c.Request.Context(), id.String())
+	if err != nil {
+		h.writeServiceErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, cancellationToAPI(rec, r))
+}
+
+// reasonFromPtr turns the nullable request reason into a plain string.
+func reasonFromPtr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+// cancellationToAPI maps the service-layer record + rental to the
+// openapi.RentalCancellation shape. ADR-lite #2: the record is
+// immutable once written; corrections are new events referencing the
+// original.
+func cancellationToAPI(rec rentsvc.CancellationRecord, _ rental.Rental) api.RentalCancellation {
+	out := api.RentalCancellation{
+		Id:                                   toUUID(rec.ID),
+		RentalId:                             toUUID(rec.RentalID),
+		ActorAccountId:                       toUUID(rec.ActorID),
+		ActorKind:                            api.RentalCancellationActorKind(rec.ActorKind),
+		WindowApplied:                        string(rec.WindowCode),
+		CancellationFeeCents:                 int(rec.CancellationFeeCents),
+		TenantRefundCents:                    int(rec.TenantRefundCents),
+		OwnerPayoutCentsAfterCancellation:    int(rec.OwnerPayoutCentsAfterCancellation),
+		OperatorPayoutCentsAfterCancellation: int(rec.OperatorPayoutCentsAfterCancellation),
+		DepositCaptureCents:                  int(rec.DepositCaptureCents),
+		DepositReleaseCents:                  int(rec.DepositReleaseCents),
+		DepositPartialCaptureCents:           int(rec.DepositPartialCaptureCents),
+		StateDeposit:                         api.RentalCancellationStateDeposit(rec.DepositState),
+		IssuedAt:                             rec.IssuedAt,
+	}
+	if rec.ProcessorOperationID != "" {
+		v := rec.ProcessorOperationID
+		out.ProcessorOperationId = &v
+	}
+	if rec.ReversalReason != "" {
+		v := rec.ReversalReason
+		out.ReversalReason = &v
+	}
+	return out
 }
 
 // GetRentalReceipt implements api.GetRentalReceipt.

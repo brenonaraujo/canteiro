@@ -17,21 +17,25 @@ import (
 // --- fakes ---------------------------------------------------------------
 
 type fakeRepo struct {
-	rentals  map[string]rental.Rental
-	intents  map[string]rentsvc.PaymentIntent
-	webhooks map[string]rentsvc.WebhookEvent
-	receipts map[string]rental.Receipt
-	blocks   map[string][]rentsvc.Block
-	mu       sync.Mutex
+	rentals       map[string]rental.Rental
+	intents       map[string]rentsvc.PaymentIntent
+	webhooks      map[string]rentsvc.WebhookEvent
+	receipts      map[string]rental.Receipt
+	blocks        map[string][]rentsvc.Block
+	cancellations map[string]rentsvc.CancellationRecord
+	blockedAccts  map[string]bool
+	mu            sync.Mutex
 }
 
 func newFakeRepo() *fakeRepo {
 	return &fakeRepo{
-		rentals:  map[string]rental.Rental{},
-		intents:  map[string]rentsvc.PaymentIntent{},
-		webhooks: map[string]rentsvc.WebhookEvent{},
-		receipts: map[string]rental.Receipt{},
-		blocks:   map[string][]rentsvc.Block{},
+		rentals:       map[string]rental.Rental{},
+		intents:       map[string]rentsvc.PaymentIntent{},
+		webhooks:      map[string]rentsvc.WebhookEvent{},
+		receipts:      map[string]rental.Receipt{},
+		blocks:        map[string][]rentsvc.Block{},
+		cancellations: map[string]rentsvc.CancellationRecord{},
+		blockedAccts:  map[string]bool{},
 	}
 }
 
@@ -215,11 +219,38 @@ func (f *fakeRepo) RecordWebhookEvent(_ context.Context, ev rentsvc.WebhookEvent
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	key := ev.Provider + "|" + ev.ProviderEventID
-	if _, exists := f.webhooks[key]; exists {
-		return f.webhooks[key], nil
+	if existing, exists := f.webhooks[key]; exists {
+		return existing, rental.ErrIdempotencyConflict
 	}
 	f.webhooks[key] = ev
 	return ev, nil
+}
+
+func (f *fakeRepo) SaveCancellation(_ context.Context, c rentsvc.CancellationRecord) (rentsvc.CancellationRecord, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, exists := f.cancellations[c.RentalID]; exists {
+		return f.cancellations[c.RentalID], rental.ErrIdempotencyConflict
+	}
+	if c.ID == "" {
+		c.ID = "canc-" + c.RentalID
+	}
+	f.cancellations[c.RentalID] = c
+	return c, nil
+}
+
+func (f *fakeRepo) GetCancellationByRental(_ context.Context, rentalID string) (rentsvc.CancellationRecord, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	c, ok := f.cancellations[rentalID]
+	return c, ok, nil
+}
+
+func (f *fakeRepo) SetTenantChargebackBlocked(_ context.Context, tenantID string, blocked bool) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.blockedAccts[tenantID] = blocked
+	return nil
 }
 
 func containsState(states []rental.State, s rental.State) bool {

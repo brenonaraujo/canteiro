@@ -179,9 +179,15 @@ func (wired) GetRental(c *gin.Context, _ openapi_types.UUID) { c.Status(http.Sta
 func (wired) AuthorizeRentalPayment(c *gin.Context, _ openapi_types.UUID) {
 	c.Status(http.StatusNotFound)
 }
-func (wired) AcceptRental(c *gin.Context, _ openapi_types.UUID)     { c.Status(http.StatusNotFound) }
-func (wired) DeclineRental(c *gin.Context, _ openapi_types.UUID)    { c.Status(http.StatusNotFound) }
-func (wired) CancelRental(c *gin.Context, _ openapi_types.UUID)     { c.Status(http.StatusNotFound) }
+func (wired) AcceptRental(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
+func (wired) DeclineRental(c *gin.Context, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
+func (wired) CancelRental(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
+func (wired) CreateRentalCancellation(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
+func (wired) GetRentalCancellation(c *gin.Context, _ openapi_types.UUID) {
+	c.Status(http.StatusNotFound)
+}
 func (wired) GetRentalReceipt(c *gin.Context, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
 func (wired) PaymentWebhook(c *gin.Context, _ api.PaymentWebhookParams) {
 	c.Status(http.StatusNotFound)
