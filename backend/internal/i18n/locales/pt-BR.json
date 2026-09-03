@@ -37,8 +37,13 @@
   "rental.payment_mismatch": "O valor pago diverge do total calculado. Pagamento rejeitado.",
   "rental.tenant_has_debt": "Você possui uma dívida de avaria não paga. Quite ou solicite perdão antes de reservar.",
   "rental.listing_unavailable": "Este anúncio não está disponível para reserva.",
+  "rental.cancellation_forbidden": "Apenas o locatário, o proprietário do anúncio ou a plataforma podem cancelar esta reserva.",
+  "rental.cancellation_invalid_actor": "Ator de cancelamento inválido.",
+  "rental.chargeback_blocked": "Sua conta está bloqueada por chargeback. Regularize com o suporte antes de fazer novas reservas.",
   "payment.invalid_body": "Corpo do webhook inválido.",
   "payment.invalid_json": "JSON do webhook inválido.",
   "payment.signature_invalid": "Assinatura do webhook inválida.",
-  "payment.mismatch": "O valor autorizado pelo processador diverge do total calculado."
+  "payment.mismatch": "O valor autorizado pelo processador diverge do total calculado.",
+  "payment.chargeback_reversal": "Chargeback recebido — reembolso emitido ao locatário e repasse ao proprietário estornado.",
+  "payment.refund_recorded": "Reembolso registrado; recibo de cancelamento atualizado."
 }

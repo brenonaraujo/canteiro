@@ -78,16 +78,16 @@ func (paymentServer) GetPublicListing(*gin.Context, openapiUUID) { panic("unused
 func (paymentServer) GetPublicCalendar(*gin.Context, openapiUUID, api.GetPublicCalendarParams) {
 	panic("unused")
 }
-func (paymentServer) CreateRental(*gin.Context)                        { panic("unused") }
-func (paymentServer) ListMyRentals(*gin.Context)                       { panic("unused") }
-func (paymentServer) GetRental(*gin.Context, openapiUUID)              { panic("unused") }
-func (paymentServer) AuthorizeRentalPayment(*gin.Context, openapiUUID) { panic("unused") }
-func (paymentServer) AcceptRental(*gin.Context, openapiUUID)           { panic("unused") }
-func (paymentServer) DeclineRental(*gin.Context, openapiUUID)          { panic("unused") }
-func (paymentServer) CancelRental(*gin.Context, openapiUUID)           { panic("unused") }
+func (paymentServer) CreateRental(*gin.Context)                          { panic("unused") }
+func (paymentServer) ListMyRentals(*gin.Context)                         { panic("unused") }
+func (paymentServer) GetRental(*gin.Context, openapiUUID)                { panic("unused") }
+func (paymentServer) AuthorizeRentalPayment(*gin.Context, openapiUUID)   { panic("unused") }
+func (paymentServer) AcceptRental(*gin.Context, openapiUUID)             { panic("unused") }
+func (paymentServer) DeclineRental(*gin.Context, openapiUUID)            { panic("unused") }
+func (paymentServer) CancelRental(*gin.Context, openapiUUID)             { panic("unused") }
 func (paymentServer) CreateRentalCancellation(*gin.Context, openapiUUID) { panic("unused") }
-func (paymentServer) GetRentalCancellation(*gin.Context, openapiUUID)   { panic("unused") }
-func (paymentServer) GetRentalReceipt(*gin.Context, openapiUUID)       { panic("unused") }
+func (paymentServer) GetRentalCancellation(*gin.Context, openapiUUID)    { panic("unused") }
+func (paymentServer) GetRentalReceipt(*gin.Context, openapiUUID)         { panic("unused") }
 
 func (s paymentServer) PaymentWebhook(c *gin.Context, p api.PaymentWebhookParams) {
 	s.api.PaymentWebhook(c, p)

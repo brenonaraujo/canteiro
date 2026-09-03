@@ -37,8 +37,13 @@
   "rental.payment_mismatch": "The amount paid differs from the calculated total. Payment rejected.",
   "rental.tenant_has_debt": "You have an unpaid damage balance. Settle it or request staff forgiveness before reserving.",
   "rental.listing_unavailable": "This listing is not available for reservation.",
+  "rental.cancellation_forbidden": "Only the tenant, the listing owner, or the platform can cancel this reservation.",
+  "rental.cancellation_invalid_actor": "Invalid cancellation actor.",
+  "rental.chargeback_blocked": "Your account is blocked due to a chargeback. Regularise with support before making new reservations.",
   "payment.invalid_body": "Invalid webhook body.",
   "payment.invalid_json": "Invalid webhook JSON.",
   "payment.signature_invalid": "Invalid webhook signature.",
-  "payment.mismatch": "The amount authorized by the processor differs from the calculated total."
+  "payment.mismatch": "The amount authorized by the processor differs from the calculated total.",
+  "payment.chargeback_reversal": "Chargeback received — refund issued to tenant and owner payout reversed.",
+  "payment.refund_recorded": "Refund recorded; cancellation receipt updated."
 }

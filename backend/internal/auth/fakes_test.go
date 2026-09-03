@@ -179,9 +179,9 @@ func (wired) GetRental(c *gin.Context, _ openapi_types.UUID) { c.Status(http.Sta
 func (wired) AuthorizeRentalPayment(c *gin.Context, _ openapi_types.UUID) {
 	c.Status(http.StatusNotFound)
 }
-func (wired) AcceptRental(c *gin.Context, _ openapi_types.UUID)     { c.Status(http.StatusNotFound) }
-func (wired) DeclineRental(c *gin.Context, _ openapi_types.UUID)    { c.Status(http.StatusNotFound) }
-func (wired) CancelRental(c *gin.Context, _ openapi_types.UUID)     { c.Status(http.StatusNotFound) }
+func (wired) AcceptRental(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
+func (wired) DeclineRental(c *gin.Context, _ openapi_types.UUID) { c.Status(http.StatusNotFound) }
+func (wired) CancelRental(c *gin.Context, _ openapi_types.UUID)  { c.Status(http.StatusNotFound) }
 func (wired) CreateRentalCancellation(c *gin.Context, _ openapi_types.UUID) {
 	c.Status(http.StatusNotFound)
 }

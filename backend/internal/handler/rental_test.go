@@ -29,6 +29,7 @@ type rentSvcFake struct {
 	rentals         map[string]rental.Rental
 	intents         map[string]rentsvc.PaymentIntent
 	receipts        map[string]rental.Receipt
+	cancellations   map[string]rentsvc.CancellationRecord
 	createErr       error
 	mu              sync.Mutex
 	createCalls     int
@@ -42,9 +43,10 @@ type rentSvcFake struct {
 
 func newRentSvcFake() *rentSvcFake {
 	return &rentSvcFake{
-		rentals:  map[string]rental.Rental{},
-		intents:  map[string]rentsvc.PaymentIntent{},
-		receipts: map[string]rental.Receipt{},
+		rentals:       map[string]rental.Rental{},
+		intents:       map[string]rentsvc.PaymentIntent{},
+		receipts:      map[string]rental.Receipt{},
+		cancellations: map[string]rentsvc.CancellationRecord{},
 	}
 }
 
@@ -179,15 +181,15 @@ func (f *rentSvcFake) Cancel(_ context.Context, in rentsvc.CancelInput) (rentsvc
 	r.State = rental.StateCancelled
 	f.rentals[in.RentalID] = r
 	rec := rentsvc.CancellationRecord{
-		ID:                "canc-" + in.RentalID,
-		RentalID:          in.RentalID,
-		ActorID:           in.CallerAccountID,
-		ActorKind:         in.ActorKind,
-		WindowCode:        rental.WindowOwnerPrePickup,
-		TenantRefundCents: r.RentCents + r.OperatorCents,
-		DepositState:      rental.DepositReleased,
+		ID:                  "canc-" + in.RentalID,
+		RentalID:            in.RentalID,
+		ActorID:             in.CallerAccountID,
+		ActorKind:           in.ActorKind,
+		WindowCode:          rental.WindowOwnerPrePickup,
+		TenantRefundCents:   r.RentCents + r.OperatorCents,
+		DepositState:        rental.DepositReleased,
 		DepositReleaseCents: r.DepositCents,
-		IssuedAt:          time.Now().UTC(),
+		IssuedAt:            time.Now().UTC(),
 	}
 	return rentsvc.CancellationResult{Cancellation: rec, Rental: r}, nil
 }
@@ -202,17 +204,41 @@ func (f *rentSvcFake) GetCancellation(_ context.Context, rentalID, callerAccount
 	if r.TenantAccountID != callerAccountID && r.ListingSnapshot.OwnerID != callerAccountID {
 		return rentsvc.CancellationRecord{}, rental.ErrForbidden
 	}
+	if c, ok := f.cancellations[rentalID]; ok {
+		return c, nil
+	}
 	return rentsvc.CancellationRecord{
-		ID:                "canc-" + rentalID,
-		RentalID:          rentalID,
-		ActorID:           r.TenantAccountID,
-		ActorKind:         rental.ActorTenant,
-		WindowCode:        rental.WindowOwnerPrePickup,
-		TenantRefundCents: r.RentCents + r.OperatorCents,
-		DepositState:      rental.DepositReleased,
+		ID:                  "canc-" + rentalID,
+		RentalID:            rentalID,
+		ActorID:             r.TenantAccountID,
+		ActorKind:           rental.ActorTenant,
+		WindowCode:          rental.WindowOwnerPrePickup,
+		TenantRefundCents:   r.RentCents + r.OperatorCents,
+		DepositState:        rental.DepositReleased,
 		DepositReleaseCents: r.DepositCents,
-		IssuedAt:          time.Now().UTC(),
+		IssuedAt:            time.Now().UTC(),
 	}, nil
+}
+
+// seedCancellation places a known cancellation record in the fake's map.
+func (f *rentSvcFake) seedCancellation(rentalID string) rentsvc.CancellationRecord {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	c := rentsvc.CancellationRecord{
+		ID:                   "canc-" + rentalID,
+		RentalID:             rentalID,
+		ActorID:              "tenant-1",
+		ActorKind:            rental.ActorTenant,
+		WindowCode:           rental.WindowTenantGe24h,
+		CancellationFeeCents: 1000,
+		TenantRefundCents:    9000,
+		CommissionCents:      1200,
+		DepositState:         rental.DepositReleased,
+		DepositReleaseCents:  20000,
+		IssuedAt:             time.Now().UTC(),
+	}
+	f.cancellations[rentalID] = c
+	return c
 }
 
 func (f *rentSvcFake) AuthorizeIntent(_ context.Context, in rentsvc.AuthorizeIntentInput) (rentsvc.PaymentIntent, error) {
@@ -265,6 +291,36 @@ func (f *rentSvcFake) seedReceipt(rentalID, tenantID string) rental.Receipt {
 	}
 	f.receipts[rentalID] = rec
 	return rec
+}
+
+// seedRental places a known rental in the fake's map.
+func (f *rentSvcFake) seedRental(rentalID, tenantID string) rental.Rental {
+	r := rental.Rental{
+		ID:                  rentalID,
+		ListingID:           "11111111-1111-4111-8111-111111111111",
+		TenantAccountID:     tenantID,
+		State:               rental.StateAuthorized,
+		StartsAt:            time.Date(2026, 10, 12, 8, 0, 0, 0, time.UTC),
+		EndsAt:              time.Date(2026, 10, 12, 12, 0, 0, 0, time.UTC),
+		RentCents:           10000,
+		OperatorCents:       0,
+		DepositCents:        20000,
+		CommissionCents:     1200,
+		OwnerPayoutCents:    8800,
+		OperatorPayoutCents: 0,
+		ListingSnapshot: rental.ListingSnapshot{
+			OwnerID:          "owner-1",
+			Title:            "Furadeira",
+			Category:         "electric",
+			PriceUnit:        "hour",
+			PriceAmountCents: 5000,
+			DepositCents:     20000,
+			MinLeadTimeHours: 12,
+			Operator:         rental.OperatorSnapshot{Mode: "none"},
+		},
+	}
+	f.rentals[r.ID] = r
+	return r
 }
 
 func (f *rentSvcFake) HandleWebhookEvent(_ context.Context, _ rentsvc.ProviderWebhookEvent) error {
@@ -550,6 +606,54 @@ func TestCancelRental_HappyPath(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/rentals/"+items[0].Id.String()+"/cancel", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestCreateRentalCancellation_HappyPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := newRentSvcFake()
+	svc.seedRental("11111111-1111-4111-8111-111111111111", "tenant-1")
+	api2 := handler.NewRentalAPI(svc, func(c *gin.Context) (string, bool) { return "tenant-1", true })
+	r := gin.New()
+	api.RegisterHandlers(r, rentalServer{api: api2})
+	w := httptest.NewRecorder()
+	body := `{"actor_kind":"tenant","reason":"change of plans"}`
+	req, _ := http.NewRequest("POST", "/rentals/11111111-1111-4111-8111-111111111111/cancellations", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusCreated, w.Code)
+	var got api.RentalCancellation
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	require.Equal(t, "tenant", string(got.ActorKind))
+}
+
+func TestCreateRentalCancellation_RequiresSession(t *testing.T) {
+	r := newRentalRouter(t, "")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/rentals/11111111-1111-4111-8111-111111111111/cancellations", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetRentalCancellation_NotFound(t *testing.T) {
+	r := newRentalRouter(t, "tenant-1")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/rentals/11111111-1111-4111-8111-111111111111/cancellations", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetRentalCancellation_HappyPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := newRentSvcFake()
+	svc.seedRental("11111111-1111-4111-8111-111111111111", "tenant-1")
+	svc.seedCancellation("11111111-1111-4111-8111-111111111111")
+	api2 := handler.NewRentalAPI(svc, func(c *gin.Context) (string, bool) { return "tenant-1", true })
+	r := gin.New()
+	api.RegisterHandlers(r, rentalServer{api: api2})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/rentals/11111111-1111-4111-8111-111111111111/cancellations", nil)
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 }
