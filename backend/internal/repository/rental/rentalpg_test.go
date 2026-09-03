@@ -1,9 +1,7 @@
 package rentalpg_test
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -24,22 +22,10 @@ func TestNew_DoesNotPanic(t *testing.T) {
 
 func TestToRentalSnapshot_RoundTrip(t *testing.T) {
 	t.Parallel()
-	now := time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC)
 	r := rental.Rental{
-		ID:               "rental-1",
-		ListingID:        "listing-1",
-		TenantAccountID:  "tenant-1",
-		State:            rental.StatePending,
-		IntentKey:        "ik-1",
-		StartsAt:         now,
-		EndsAt:           now.Add(2 * time.Hour),
-		CreatedAt:        now,
-		UpdatedAt:        now,
-		RentCents:        10000,
-		OperatorCents:    2000,
-		DepositCents:     50000,
-		CommissionCents:  1440,
-		OwnerPayoutCents: 10560,
+		ID:        "rental-1",
+		State:     rental.StatePending,
+		RentCents: 10000,
 		ListingSnapshot: rental.ListingSnapshot{
 			OwnerID:          "owner-1",
 			Title:            "Furadeira Bosch",
@@ -84,13 +70,8 @@ func TestPaymentIntentKey_FormatStable(t *testing.T) {
 	// The repo persists intent_key as the deterministic dedup key.
 	intent := rentsvc.PaymentIntent{
 		ID:             "pi-1",
-		RentalID:       "rental-1",
-		Provider:       "noop",
 		IdempotencyKey: "rental-rental-1-attempt-1",
 	}
 	require.Equal(t, "pi-1", intent.ID)
 	require.NotEmpty(t, intent.IdempotencyKey)
 }
-
-// Unused parameter to silence linters — integration tests use ctx.
-var _ = context.TODO
