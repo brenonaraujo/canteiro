@@ -124,6 +124,9 @@ func (fakeDebtRepo2) ListOpenForRenter(context.Context, string) ([]rental.Debt, 
 	return nil, nil
 }
 func (fakeDebtRepo2) ListDueBy(context.Context, time.Time) ([]rental.Debt, error) { return nil, nil }
+func (fakeDebtRepo2) Mutate(context.Context, string, func(*rental.Debt)) (rental.Debt, error) {
+	return rental.Debt{}, nil
+}
 
 type fakeReturnRepo2 struct{}
 

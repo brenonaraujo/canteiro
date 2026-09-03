@@ -116,6 +116,9 @@ func (fakeDebt) GetByDamage(context.Context, string) (rental.Debt, bool, error) 
 func (fakeDebt) UpdateState(context.Context, string, rental.DebtState, rental.DebtState, func(*rental.Debt)) (rental.Debt, error) {
 	return rental.Debt{}, nil
 }
+func (fakeDebt) Mutate(context.Context, string, func(*rental.Debt)) (rental.Debt, error) {
+	return rental.Debt{}, nil
+}
 func (fakeDebt) ListOpenForRenter(context.Context, string) ([]rental.Debt, error) { return nil, nil }
 func (fakeDebt) ListDueBy(context.Context, time.Time) ([]rental.Debt, error)      { return nil, nil }
 

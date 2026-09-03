@@ -64,6 +64,10 @@ type DebtRepository interface {
 	GetByID(ctx context.Context, id string) (rental.Debt, error)
 	GetByDamage(ctx context.Context, damageID string) (rental.Debt, bool, error)
 	UpdateState(ctx context.Context, id string, from, to rental.DebtState, mutate func(d *rental.Debt)) (rental.Debt, error)
+	// Mutate runs the callback without a state change. Used for partial
+	// forgiveness that keeps the debt in DebtOpen. The repository must
+	// bump updated_at.
+	Mutate(ctx context.Context, id string, mutate func(d *rental.Debt)) (rental.Debt, error)
 	ListOpenForRenter(ctx context.Context, renterID string) ([]rental.Debt, error)
 	ListDueBy(ctx context.Context, before time.Time) ([]rental.Debt, error)
 }

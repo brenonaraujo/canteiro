@@ -89,6 +89,8 @@ var (
 
 	// ErrF5DebtNotFound is the debt does not exist.
 	ErrF5DebtNotFound = errors.New("F5 debt not found")
+	// ErrF5DebtAlreadyExists is a debt row already exists for the damage.
+	ErrF5DebtAlreadyExists = errors.New("F5 debt already exists")
 	// ErrF5DebtAlreadySettled is the debt was already settled or forgiven.
 	ErrF5DebtAlreadySettled = errors.New("F5 debt already settled")
 	// ErrF5DebtInvalidState is the debt state transition is not allowed.
