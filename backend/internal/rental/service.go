@@ -27,6 +27,11 @@ type Repository interface {
 	UpsertPaymentIntent(ctx context.Context, intent PaymentIntent) (PaymentIntent, error)
 	GetPaymentIntent(ctx context.Context, rentalID string) (PaymentIntent, bool, error)
 	RecordWebhookEvent(ctx context.Context, ev WebhookEvent) (WebhookEvent, error)
+	// F4 cancellation persistence.
+	SaveCancellation(ctx context.Context, c CancellationRecord) (CancellationRecord, error)
+	GetCancellationByRental(ctx context.Context, rentalID string) (CancellationRecord, bool, error)
+	// F4 chargeback blocks the tenant's account until manual unblock (EC-5).
+	SetTenantChargebackBlocked(ctx context.Context, tenantID string, blocked bool) error
 }
 
 // PaymentIntent is the persisted representation of a PSP intent.
@@ -66,6 +71,66 @@ type WebhookEvent struct {
 	SignatureValid bool
 }
 
+// CancellationRecord is the immutable, audit-ready F4 record persisted
+// per rental. The row is created once and never updated (ADR-lite #2);
+// a correction is a new event referencing the original.
+type CancellationRecord struct {
+	IssuedAt time.Time
+
+	ID        string
+	RentalID  string
+	ActorID   string
+	ActorKind rental.ActorKind
+
+	WindowCode rental.WindowCode
+
+	// Split per part — what the platform keeps vs what each side gets.
+	CancellationFeeCents              int64
+	TenantRefundCents                 int64
+	OwnerPayoutCentsAfterCancellation int64
+	OperatorPayoutCentsAfterCancellation int64
+	CommissionCents                   int64
+
+	// Deposit state at the moment of cancellation.
+	DepositState                 rental.DepositState
+	DepositCaptureCents          int64
+	DepositReleaseCents          int64
+	DepositPartialCaptureCents   int64
+
+	// PSP-side operation id when the trigger is a webhook.
+	ProcessorOperationID string
+	ReversalReason       string
+}
+
+// ToReceiptFields copies the F4 AC-11 fields onto a Receipt. The receipt
+// is the tenant-visible write-once surface; the cancellation record is
+// the platform-side audit row.
+func (c CancellationRecord) ToReceiptFields() (rental.ActorKind, rental.WindowCode, int64, int64, int64, int64, int64, rental.DepositState, int64, int64, int64, string, time.Time) {
+	return c.ActorKind, c.WindowCode, c.CancellationFeeCents, c.TenantRefundCents,
+		c.OwnerPayoutCentsAfterCancellation, c.OperatorPayoutCentsAfterCancellation,
+		c.CommissionCents, c.DepositState, c.DepositCaptureCents, c.DepositReleaseCents,
+		c.DepositPartialCaptureCents, c.ProcessorOperationID, c.IssuedAt
+}
+
+// CancelInput is the input to the F4 cancellation use case.
+type CancelInput struct {
+	CallerAccountID string
+	RentalID        string
+	ActorKind       rental.ActorKind
+	Reason          string
+	ProcessorOpID  string  // set when the trigger is a webhook
+	IsChargebackReversal bool
+	FeeBPSOverride  int64 // 0 = use config default
+}
+
+// CancellationResult is what Cancel returns. The state machine moves the
+// rental through two transitions (→ cancellation_in_progress → cancelled);
+// both writes are atomic from the caller's perspective.
+type CancellationResult struct {
+	Cancellation CancellationRecord
+	Rental       rental.Rental
+}
+
 // Block is a thin wrapper around listing.Block.
 type Block struct {
 	StartsAt  time.Time
@@ -99,6 +164,12 @@ type Config struct {
 	AcceptanceWindow   time.Duration
 	MinLeadTime        time.Duration
 	CommissionBPS      int64
+
+	// F4 knobs.
+	CancellationFeeBPS     int64 // 10% default = 1000
+	CancellationWindowH    int   // 24h default
+	MinFractionHours       int   // EC-2: minimum fraction when after-start
+	FeatureF4Enabled       bool  // R1 rollback flag
 }
 
 // Defaults fills the zero-valued fields with the documented defaults.
@@ -120,6 +191,15 @@ func (c *Config) Defaults() {
 	}
 	if c.IDGen == nil {
 		c.IDGen = defaultIDGen{}
+	}
+	if c.CancellationFeeBPS == 0 {
+		c.CancellationFeeBPS = 1000
+	}
+	if c.CancellationWindowH == 0 {
+		c.CancellationWindowH = 24
+	}
+	if c.MinFractionHours == 0 {
+		c.MinFractionHours = 4
 	}
 }
 

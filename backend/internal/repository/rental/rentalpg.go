@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -103,6 +104,113 @@ type receiptRow struct {
 }
 
 func (receiptRow) TableName() string { return "rental_receipts" }
+
+// cancellationRow mirrors rental_cancellations (migration 0006).
+type cancellationRow struct {
+	IssuedAt time.Time `gorm:"column:issued_at"`
+
+	ID        string `gorm:"column:id;primaryKey"`
+	RentalID  string `gorm:"column:rental_id;unique"`
+	ActorAccountID string `gorm:"column:actor_account_id"`
+	ActorKind string `gorm:"column:actor_kind"`
+	WindowApplied   string `gorm:"column:window_applied"`
+	StateDeposit    string `gorm:"column:state_deposit"`
+
+	CancellationFeeCents                    int64 `gorm:"column:cancellation_fee_cents"`
+	TenantRefundCents                       int64 `gorm:"column:tenant_refund_cents"`
+	OwnerPayoutCentsAfterCancellation      int64 `gorm:"column:owner_payout_cents_after_cancellation"`
+	OperatorPayoutCentsAfterCancellation   int64 `gorm:"column:operator_payout_cents_after_cancellation"`
+	CommissionCents                         int64 `gorm:"column:commission_cents"`
+	DepositCaptureCents                     int64 `gorm:"column:deposit_capture_cents"`
+	DepositReleaseCents                     int64 `gorm:"column:deposit_release_cents"`
+	DepositPartialCaptureCents              int64 `gorm:"column:deposit_partial_capture_cents"`
+	ProcessorOperationID                    string `gorm:"column:processor_operation_id"`
+	ReversalReason                          string `gorm:"column:reversal_reason"`
+}
+
+func (cancellationRow) TableName() string { return "rental_cancellations" }
+
+func toCancellationRecord(row cancellationRow) rentsvc.CancellationRecord {
+	return rentsvc.CancellationRecord{
+		ID:                                    row.ID,
+		RentalID:                              row.RentalID,
+		ActorID:                               row.ActorAccountID,
+		ActorKind:                             rental.ActorKind(row.ActorKind),
+		WindowCode:                            rental.WindowCode(row.WindowApplied),
+		CancellationFeeCents:                  row.CancellationFeeCents,
+		TenantRefundCents:                     row.TenantRefundCents,
+		OwnerPayoutCentsAfterCancellation:     row.OwnerPayoutCentsAfterCancellation,
+		OperatorPayoutCentsAfterCancellation: row.OperatorPayoutCentsAfterCancellation,
+		CommissionCents:                       row.CommissionCents,
+		DepositState:                          rental.DepositState(row.StateDeposit),
+		DepositCaptureCents:                   row.DepositCaptureCents,
+		DepositReleaseCents:                   row.DepositReleaseCents,
+		DepositPartialCaptureCents:            row.DepositPartialCaptureCents,
+		ProcessorOperationID:                  row.ProcessorOperationID,
+		ReversalReason:                        row.ReversalReason,
+		IssuedAt:                              row.IssuedAt,
+	}
+}
+
+// SaveCancellation persists the immutable F4 row. UNIQUE on rental_id
+// makes concurrent inserts a no-op (EC-1 anti-double-penalty).
+func (r *Repo) SaveCancellation(ctx context.Context, c rentsvc.CancellationRecord) (rentsvc.CancellationRecord, error) {
+	if c.ID == "" {
+		c.ID = uuid.NewString()
+	}
+	row := cancellationRow{
+		ID:                                    c.ID,
+		RentalID:                              c.RentalID,
+		ActorAccountID:                        c.ActorID,
+		ActorKind:                             string(c.ActorKind),
+		WindowApplied:                         string(c.WindowCode),
+		StateDeposit:                          string(c.DepositState),
+		CancellationFeeCents:                  c.CancellationFeeCents,
+		TenantRefundCents:                     c.TenantRefundCents,
+		OwnerPayoutCentsAfterCancellation:     c.OwnerPayoutCentsAfterCancellation,
+		OperatorPayoutCentsAfterCancellation: c.OperatorPayoutCentsAfterCancellation,
+		CommissionCents:                       c.CommissionCents,
+		DepositCaptureCents:                   c.DepositCaptureCents,
+		DepositReleaseCents:                   c.DepositReleaseCents,
+		DepositPartialCaptureCents:            c.DepositPartialCaptureCents,
+		ProcessorOperationID:                  c.ProcessorOperationID,
+		ReversalReason:                        c.ReversalReason,
+		IssuedAt:                              c.IssuedAt,
+	}
+	if c.IssuedAt.IsZero() {
+		row.IssuedAt = time.Now().UTC()
+		c.IssuedAt = row.IssuedAt
+	}
+	if err := r.DB.WithContext(ctx).Create(&row).Error; err != nil {
+		return rentsvc.CancellationRecord{}, err
+	}
+	return c, nil
+}
+
+// GetCancellationByRental fetches the immutable F4 row. Returns
+// (zero, false, nil) when none exists yet — not an error.
+func (r *Repo) GetCancellationByRental(ctx context.Context, rentalID string) (rentsvc.CancellationRecord, bool, error) {
+	var row cancellationRow
+	if err := r.DB.WithContext(ctx).
+		Where("rental_id = ?", rentalID).
+		First(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return rentsvc.CancellationRecord{}, false, nil
+		}
+		return rentsvc.CancellationRecord{}, false, err
+	}
+	return toCancellationRecord(row), true, nil
+}
+
+// SetTenantChargebackBlocked toggles accounts.conta_bloqueada_por_chargeback.
+// F4 EC-5: chargeback reverses the owner's payout and blocks the tenant
+// account until the dispute is regularised.
+func (r *Repo) SetTenantChargebackBlocked(ctx context.Context, tenantID string, blocked bool) error {
+	return r.DB.WithContext(ctx).
+		Table("accounts").
+		Where("id = ?", tenantID).
+		Update("conta_bloqueada_por_chargeback", blocked).Error
+}
 
 func toRental(r rentalRow, snap []byte) (rental.Rental, error) {
 	out := rental.Rental{
@@ -514,7 +622,10 @@ func toPaymentIntent(row paymentIntentRow) rentsvc.PaymentIntent {
 	}
 }
 
-// RecordWebhookEvent inserts the event. UNIQUE on (provider, provider_event_id) backs EC-2 idempotency.
+// RecordWebhookEvent inserts the event. UNIQUE on (provider, provider_event_id)
+// backs EC-8 idempotency: when the row already exists we return the
+// existing event with ErrIdempotencyConflict so the service can short-circuit
+// to 200 OK (the webhook contract is "every delivery returns 200").
 func (r *Repo) RecordWebhookEvent(ctx context.Context, ev rentsvc.WebhookEvent) (rentsvc.WebhookEvent, error) {
 	id := uuid.NewString()
 	if ev.ID != "" {
@@ -535,9 +646,28 @@ func (r *Repo) RecordWebhookEvent(ctx context.Context, ev rentsvc.WebhookEvent) 
 		SignatureValid:  ev.SignatureValid,
 		ReceivedAt:      ev.ReceivedAt,
 	}
-	err := r.DB.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&row).Error
-	if err != nil {
-		return rentsvc.WebhookEvent{}, err
+	res := r.DB.WithContext(ctx).Create(&row)
+	if res.Error != nil {
+		// Detect the unique-violation path explicitly so we can return
+		// ErrIdempotencyConflict to the service. Other errors (DB
+		// down, schema mismatch, etc.) propagate as-is.
+		if isUniqueViolation(res.Error) {
+			var existing webhookEventRow
+			if lookupErr := r.DB.WithContext(ctx).
+				Where("provider = ? AND provider_event_id = ?", ev.Provider, ev.ProviderEventID).
+				First(&existing).Error; lookupErr == nil {
+				return rentsvc.WebhookEvent{
+					ID:              existing.ID,
+					Provider:        existing.Provider,
+					ProviderEventID: existing.ProviderEventID,
+					EventType:       existing.EventType,
+					RentalID:        derefStr(existing.RentalID),
+					ReceivedAt:      existing.ReceivedAt,
+					SignatureValid:  existing.SignatureValid,
+				}, rental.ErrIdempotencyConflict
+			}
+		}
+		return rentsvc.WebhookEvent{}, res.Error
 	}
 	return rentsvc.WebhookEvent{
 		ID:              row.ID,
@@ -548,6 +678,18 @@ func (r *Repo) RecordWebhookEvent(ctx context.Context, ev rentsvc.WebhookEvent) 
 		ReceivedAt:      row.ReceivedAt,
 		SignatureValid:  row.SignatureValid,
 	}, nil
+}
+
+// isUniqueViolation sniffs the unique-violation error code in pgx-style
+// drivers. The GORM error wrapper doesn't expose a typed sentinel, so
+// we match on the SQLState substring — matches both lib/pq and pgx
+// (they both emit "23505" for unique_violation).
+func isUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "23505") || strings.Contains(msg, "unique constraint") || strings.Contains(msg, "duplicate key")
 }
 
 func derefStr(p *string) string {

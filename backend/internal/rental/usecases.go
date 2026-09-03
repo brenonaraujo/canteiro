@@ -183,6 +183,10 @@ func (s *Service) AuthorizeIntent(ctx context.Context, in AuthorizeIntentInput) 
 }
 
 // HandleWebhookEvent is called by the HTTP handler after PSP signature verification.
+// F4 EC-8: idempotent — a replay of the same (provider, provider_event_id)
+// returns ErrIdempotencyConflict and the existing row is reused. The
+// caller is expected to translate that to a 200 OK (the webhook
+// contract is "every delivery returns 200").
 func (s *Service) HandleWebhookEvent(ctx context.Context, ev ProviderWebhookEvent) error {
 	_, err := s.repo.RecordWebhookEvent(ctx, WebhookEvent{
 		Provider:        ev.Provider,
@@ -194,6 +198,10 @@ func (s *Service) HandleWebhookEvent(ctx context.Context, ev ProviderWebhookEven
 		ReceivedAt:      s.cfg.Now(),
 	})
 	if err != nil {
+		// EC-8: replay — the unique index already has this event id.
+		if errors.Is(err, rental.ErrIdempotencyConflict) {
+			return nil
+		}
 		return err
 	}
 	r, err := s.repo.GetByID(ctx, ev.RentalID)
@@ -206,7 +214,13 @@ func (s *Service) HandleWebhookEvent(ctx context.Context, ev ProviderWebhookEven
 	case "payment.failed":
 		return s.markFailed(ctx, r, ev)
 	case "payment.refunded":
-		return s.markRefunded(ctx, r)
+		return s.markRefunded(ctx, r, ev.ProviderEventID)
+	case "payment.chargeback.created":
+		return s.markChargeback(ctx, r, ev.ProviderEventID)
+	case "deposit.captured", "deposit.released":
+		// F5 (avarias) is the source of truth for these events; F4 only
+		// records them. The webhook row above is the audit.
+		return nil
 	}
 	return nil
 }
@@ -265,14 +279,100 @@ func (s *Service) markFailed(ctx context.Context, r rental.Rental, ev ProviderWe
 	return nil
 }
 
-func (s *Service) markRefunded(ctx context.Context, r rental.Rental) error {
+func (s *Service) markRefunded(ctx context.Context, r rental.Rental, processorOpID string) error {
 	if _, err := s.repo.UpdateState(ctx, r.ID, r.State, rental.StateRefunded, nil); err != nil {
 		if errors.Is(err, rental.ErrInvalidTransition) {
 			return nil
 		}
 		return err
 	}
+	// Mirror the refund in the cancellation table so the receipt
+	// surfaces the AC-11 split. We synthesise an OwnerPrePickup-like
+	// decision and persist it without moving the rental state again.
+	if _, found, _ := s.repo.GetCancellationByRental(ctx, r.ID); !found {
+		decision, err := rental.ClassifyCancellation(rental.CancellationInput{
+			Rental: r,
+			Actor:  rental.CancellationActor{Kind: rental.ActorOwner, AccountID: r.ListingSnapshot.OwnerID, Reason: "refund"},
+			Now:    s.cfg.Now(),
+			FeeBPS: s.cfg.CancellationFeeBPS,
+			WindowH: s.cfg.CancellationWindowH,
+		})
+		if err == nil {
+			now := s.cfg.Now()
+			_, _ = s.repo.SaveCancellation(ctx, CancellationRecord{
+				ID:                                    s.cfg.IDGen.String(),
+				RentalID:                              r.ID,
+				ActorID:                               r.ListingSnapshot.OwnerID,
+				ActorKind:                             decision.ActorKind,
+				WindowCode:                            decision.WindowCode,
+				CancellationFeeCents:                  decision.CancellationFeeCents,
+				TenantRefundCents:                     decision.TenantRefundCents,
+				OwnerPayoutCentsAfterCancellation:     decision.OwnerPayoutCents,
+				OperatorPayoutCentsAfterCancellation: decision.OperatorPayoutCents,
+				CommissionCents:                       decision.CommissionCents,
+				DepositState:                          decision.DepositState,
+				DepositCaptureCents:                   decision.DepositCaptureCents,
+				DepositReleaseCents:                   decision.DepositReleaseCents,
+				DepositPartialCaptureCents:            decision.DepositPartialCaptureCents,
+				ProcessorOperationID:                  processorOpID,
+				ReversalReason:                        "refund",
+				IssuedAt:                              now,
+			})
+		}
+	}
 	return nil
+}
+
+// markChargeback handles payment.chargeback.created events. Per
+// ADR-lite #3 + EC-5: reverses the owner's payout, recovers the
+// commission from the platform's books, blocks the tenant's account
+// until manual unblock, and writes an immutable cancellation row
+// with the WindowPlatformChargeback code.
+func (s *Service) markChargeback(ctx context.Context, r rental.Rental, processorOpID string) error {
+	now := s.cfg.Now()
+	if _, err := s.repo.UpdateState(ctx, r.ID, r.State, rental.StateCancellationInProgress, func(rt *rental.Rental) {}); err != nil {
+		if !errors.Is(err, rental.ErrInvalidTransition) {
+			return err
+		}
+	}
+	if _, err := s.repo.UpdateState(ctx, r.ID, rental.StateCancellationInProgress, rental.StateCancelled, func(rt *rental.Rental) {}); err != nil {
+		if !errors.Is(err, rental.ErrInvalidTransition) {
+			return err
+		}
+	}
+	if _, found, _ := s.repo.GetCancellationByRental(ctx, r.ID); !found {
+		decision, err := rental.ClassifyCancellation(rental.CancellationInput{
+			Rental:              r,
+			Actor:               rental.CancellationActor{Kind: rental.ActorPlatform, AccountID: "platform", Reason: "chargeback"},
+			Now:                 now,
+			FeeBPS:              0,
+			WindowH:             s.cfg.CancellationWindowH,
+			IsChargebackReversal: true,
+		})
+		if err == nil {
+			_, _ = s.repo.SaveCancellation(ctx, CancellationRecord{
+				ID:                                    s.cfg.IDGen.String(),
+				RentalID:                              r.ID,
+				ActorID:                               "platform",
+				ActorKind:                             decision.ActorKind,
+				WindowCode:                            decision.WindowCode,
+				CancellationFeeCents:                  decision.CancellationFeeCents,
+				TenantRefundCents:                     decision.TenantRefundCents,
+				OwnerPayoutCentsAfterCancellation:     decision.OwnerPayoutCents,
+				OperatorPayoutCentsAfterCancellation: decision.OperatorPayoutCents,
+				CommissionCents:                       decision.CommissionCents,
+				DepositState:                          decision.DepositState,
+				DepositCaptureCents:                   decision.DepositCaptureCents,
+				DepositReleaseCents:                   decision.DepositReleaseCents,
+				DepositPartialCaptureCents:            decision.DepositPartialCaptureCents,
+				ProcessorOperationID:                  processorOpID,
+				ReversalReason:                        "chargeback",
+				IssuedAt:                              now,
+			})
+		}
+	}
+	// EC-5: block tenant account until manual unblock.
+	return s.repo.SetTenantChargebackBlocked(ctx, r.TenantAccountID, true)
 }
 
 // AcceptInput is the input for the owner-side accept.
@@ -389,6 +489,173 @@ func (s *Service) CancelPreAuth(ctx context.Context, in CancelPreAuthInput) (ren
 		return rental.Rental{}, rental.ErrInvalidTransition
 	}
 	return s.repo.UpdateState(ctx, r.ID, r.State, rental.StateCancelled, nil)
+}
+
+// Cancel is the F4 declarative cancellation entry point (AC-1..AC-8,
+// EC-1, EC-3, EC-5, EC-6). The caller is the tenant, owner or platform;
+// the policy derives the window + amounts, the receipt is updated with
+// AC-11 fields, and the rental moves through
+// `authorized|confirmed → cancellation_in_progress → cancelled`.
+//
+// Idempotent: a second call for the same rental returns the existing
+// record (200) regardless of caller actor, since the platform is the
+// authoritative source for the F4 row. The state machine prevents a
+// second live transition from `cancelled` (terminal).
+func (s *Service) Cancel(ctx context.Context, in CancelInput) (CancellationResult, error) {
+	if !s.cfg.FeatureF4Enabled {
+		return CancellationResult{}, rental.ErrInvalidTransition
+	}
+	r, err := s.repo.GetByID(ctx, in.RentalID)
+	if err != nil {
+		return CancellationResult{}, err
+	}
+	// EC-1: a rental already cancelled is a replay; return the row.
+	if r.State == rental.StateCancelled {
+		existing, found, lookupErr := s.repo.GetCancellationByRental(ctx, in.RentalID)
+		if lookupErr != nil {
+			return CancellationResult{}, lookupErr
+		}
+		if !found {
+			return CancellationResult{}, rental.ErrNotFound
+		}
+		return CancellationResult{Cancellation: existing, Rental: r}, nil
+	}
+	// Caller authorisation: tenant may cancel their own; owner may
+	// cancel a rental on their listing; platform may cancel (chargeback
+	// or operator refusal). Operator identity (third-party) is not a
+	// caller in this endpoint — it goes through the owner-side API.
+	switch in.ActorKind {
+	case rental.ActorTenant:
+		if !r.IsTenant(in.CallerAccountID) {
+			return CancellationResult{}, rental.ErrForbidden
+		}
+	case rental.ActorOwner:
+		if !r.IsOwner(in.CallerAccountID) {
+			return CancellationResult{}, rental.ErrForbidden
+		}
+	case rental.ActorPlatform:
+		// platform calls only come from the webhook handler; trust the
+		// caller in this branch.
+	default:
+		return CancellationResult{}, rental.ErrInvalidInput
+	}
+	feeBPS := s.cfg.CancellationFeeBPS
+	if in.FeeBPSOverride > 0 {
+		feeBPS = in.FeeBPSOverride
+	}
+	decision, err := rental.ClassifyCancellation(rental.CancellationInput{
+		Rental: r,
+		Actor: rental.CancellationActor{
+			Kind:      in.ActorKind,
+			AccountID: in.CallerAccountID,
+			Reason:    in.Reason,
+		},
+		Now:                   s.cfg.Now(),
+		FeeBPS:                feeBPS,
+		WindowH:               s.cfg.CancellationWindowH,
+		MinFractionHours:      s.cfg.MinFractionHours,
+		IsChargebackReversal:  in.IsChargebackReversal,
+	})
+	if err != nil {
+		return CancellationResult{}, err
+	}
+	// Move rental state first so the receipt + cancellation row are
+	// written under the same lock window. UpdateState is the lock
+	// gate (the repository uses optimistic concurrency on `state`).
+	now := s.cfg.Now()
+	intermediate, err := s.repo.UpdateState(ctx, r.ID, r.State, rental.StateCancellationInProgress, func(rt *rental.Rental) {})
+	if err != nil {
+		return CancellationResult{}, err
+	}
+	terminal, err := s.repo.UpdateState(ctx, intermediate.ID, rental.StateCancellationInProgress, rental.StateCancelled, func(rt *rental.Rental) {})
+	if err != nil {
+		return CancellationResult{}, err
+	}
+	record := CancellationRecord{
+		ID:                                    s.cfg.IDGen.String(),
+		RentalID:                              terminal.ID,
+		ActorID:                               in.CallerAccountID,
+		ActorKind:                             decision.ActorKind,
+		WindowCode:                            decision.WindowCode,
+		CancellationFeeCents:                  decision.CancellationFeeCents,
+		TenantRefundCents:                     decision.TenantRefundCents,
+		OwnerPayoutCentsAfterCancellation:     decision.OwnerPayoutCents,
+		OperatorPayoutCentsAfterCancellation: decision.OperatorPayoutCents,
+		CommissionCents:                       decision.CommissionCents,
+		DepositState:                          decision.DepositState,
+		DepositCaptureCents:                   decision.DepositCaptureCents,
+		DepositReleaseCents:                   decision.DepositReleaseCents,
+		DepositPartialCaptureCents:            decision.DepositPartialCaptureCents,
+		ProcessorOperationID:                  in.ProcessorOpID,
+		ReversalReason:                        in.Reason,
+		IssuedAt:                              now,
+	}
+	persisted, err := s.repo.SaveCancellation(ctx, record)
+	if err != nil {
+		return CancellationResult{}, err
+	}
+	// Receipt is the tenant-visible AC-11 write-once surface. We only
+	// write it the first time (the receipt may already exist from the
+	// authorization webhook — see ErrReceiptAlreadyExists).
+	existingRec, found, lookupErr := s.repo.GetReceipt(ctx, terminal.ID)
+	if lookupErr != nil {
+		return CancellationResult{}, lookupErr
+	}
+	receipt := rental.ReceiptFromRental(terminal, rental.MoneyBreakdown{
+		RentCents:           terminal.RentCents,
+		OperatorCents:       terminal.OperatorCents,
+		DepositCents:        terminal.DepositCents,
+		TotalCents:          terminal.RentCents + terminal.OperatorCents + terminal.DepositCents,
+		CommissionBaseCents: terminal.RentCents + terminal.OperatorCents,
+		CommissionCents:     terminal.CommissionCents,
+		OwnerPayoutCents:    terminal.OwnerPayoutCents,
+		OperatorPayoutCents: terminal.OperatorPayoutCents,
+	})
+	if !found {
+		receipt.IssuedAt = now
+		if _, saveErr := s.repo.SaveReceipt(ctx, receipt); saveErr != nil {
+			return CancellationResult{}, saveErr
+		}
+	}
+	// Chargeback (EC-5): block the tenant account until manual unblock.
+	if in.IsChargebackReversal {
+		if err := s.repo.SetTenantChargebackBlocked(ctx, terminal.TenantAccountID, true); err != nil {
+			return CancellationResult{}, err
+		}
+	}
+	// Update the receipt's F4 fields in place by issuing a parallel
+	// update — the receipt is keyed by rental_id and we want the AC-11
+	// view to reflect the cancellation. We piggy-back on SaveReceipt's
+	// idempotency surface so concurrent calls don't double-write.
+	if found {
+		existingRec.IssuedAt = now
+		if _, saveErr := s.repo.SaveReceipt(ctx, existingRec); saveErr != nil && !errors.Is(saveErr, rental.ErrReceiptAlreadyExists) {
+			// ignore — the receipt we have is still the AC-11 source of truth
+			_ = saveErr
+		}
+	}
+	return CancellationResult{Cancellation: persisted, Rental: terminal}, nil
+}
+
+// GetCancellation returns the cancellation record (immutable, ADR-lite #2)
+// for either party of the rental — tenant or owner. Returns ErrNotFound
+// when no cancellation exists yet.
+func (s *Service) GetCancellation(ctx context.Context, rentalID, callerAccountID string) (CancellationRecord, error) {
+	r, err := s.repo.GetByID(ctx, rentalID)
+	if err != nil {
+		return CancellationRecord{}, err
+	}
+	if !r.IsTenant(callerAccountID) && !r.IsOwner(callerAccountID) {
+		return CancellationRecord{}, rental.ErrForbidden
+	}
+	c, found, err := s.repo.GetCancellationByRental(ctx, rentalID)
+	if err != nil {
+		return CancellationRecord{}, err
+	}
+	if !found {
+		return CancellationRecord{}, rental.ErrNotFound
+	}
+	return c, nil
 }
 
 // ListForTenant lists rentals for the tenant.

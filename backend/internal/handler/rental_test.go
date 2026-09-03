@@ -168,6 +168,53 @@ func (f *rentSvcFake) CancelPreAuth(_ context.Context, in rentsvc.CancelPreAuthI
 	return r, nil
 }
 
+func (f *rentSvcFake) Cancel(_ context.Context, in rentsvc.CancelInput) (rentsvc.CancellationResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cancelCalls++
+	r, ok := f.rentals[in.RentalID]
+	if !ok {
+		return rentsvc.CancellationResult{}, rental.ErrNotFound
+	}
+	r.State = rental.StateCancelled
+	f.rentals[in.RentalID] = r
+	rec := rentsvc.CancellationRecord{
+		ID:                "canc-" + in.RentalID,
+		RentalID:          in.RentalID,
+		ActorID:           in.CallerAccountID,
+		ActorKind:         in.ActorKind,
+		WindowCode:        rental.WindowOwnerPrePickup,
+		TenantRefundCents: r.RentCents + r.OperatorCents,
+		DepositState:      rental.DepositReleased,
+		DepositReleaseCents: r.DepositCents,
+		IssuedAt:          time.Now().UTC(),
+	}
+	return rentsvc.CancellationResult{Cancellation: rec, Rental: r}, nil
+}
+
+func (f *rentSvcFake) GetCancellation(_ context.Context, rentalID, callerAccountID string) (rentsvc.CancellationRecord, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	r, ok := f.rentals[rentalID]
+	if !ok {
+		return rentsvc.CancellationRecord{}, rental.ErrNotFound
+	}
+	if r.TenantAccountID != callerAccountID && r.ListingSnapshot.OwnerID != callerAccountID {
+		return rentsvc.CancellationRecord{}, rental.ErrForbidden
+	}
+	return rentsvc.CancellationRecord{
+		ID:                "canc-" + rentalID,
+		RentalID:          rentalID,
+		ActorID:           r.TenantAccountID,
+		ActorKind:         rental.ActorTenant,
+		WindowCode:        rental.WindowOwnerPrePickup,
+		TenantRefundCents: r.RentCents + r.OperatorCents,
+		DepositState:      rental.DepositReleased,
+		DepositReleaseCents: r.DepositCents,
+		IssuedAt:          time.Now().UTC(),
+	}, nil
+}
+
 func (f *rentSvcFake) AuthorizeIntent(_ context.Context, in rentsvc.AuthorizeIntentInput) (rentsvc.PaymentIntent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -288,6 +335,12 @@ func (s rentalServer) DeclineRental(c *gin.Context, id openapiUUID) {
 }
 func (s rentalServer) CancelRental(c *gin.Context, id openapiUUID) {
 	s.api.CancelRental(c, id)
+}
+func (s rentalServer) CreateRentalCancellation(c *gin.Context, id openapiUUID) {
+	s.api.CreateRentalCancellation(c, id)
+}
+func (s rentalServer) GetRentalCancellation(c *gin.Context, id openapiUUID) {
+	s.api.GetRentalCancellation(c, id)
 }
 func (s rentalServer) GetRentalReceipt(c *gin.Context, id openapiUUID) {
 	s.api.GetRentalReceipt(c, id)

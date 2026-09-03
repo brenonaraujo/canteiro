@@ -85,6 +85,8 @@ func (paymentServer) AuthorizeRentalPayment(*gin.Context, openapiUUID) { panic("
 func (paymentServer) AcceptRental(*gin.Context, openapiUUID)           { panic("unused") }
 func (paymentServer) DeclineRental(*gin.Context, openapiUUID)          { panic("unused") }
 func (paymentServer) CancelRental(*gin.Context, openapiUUID)           { panic("unused") }
+func (paymentServer) CreateRentalCancellation(*gin.Context, openapiUUID) { panic("unused") }
+func (paymentServer) GetRentalCancellation(*gin.Context, openapiUUID)   { panic("unused") }
 func (paymentServer) GetRentalReceipt(*gin.Context, openapiUUID)       { panic("unused") }
 
 func (s paymentServer) PaymentWebhook(c *gin.Context, p api.PaymentWebhookParams) {

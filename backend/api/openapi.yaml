@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Canteiro API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     F1 Conta: identidade Google, perfil mínimo, logout e desativação.
     F2 Catálogo: publicar, busca pública, operador declarado,
@@ -9,6 +9,13 @@ info:
     F3 Reserva: criar intent, autorizar pagamento (Stripe), webhook,
     aceitar/recusar pelo proprietário dentro da janela de 12h,
     recibo imutável do locatário.
+    F4 Cancelamento + liquidação: política declarativa por ator e
+    janela (locatário ≥24h/<24h/pós-início, proprietário, plataforma),
+    split em 3 caixinhas (aluguel/horas/caução) com comissão 12%
+    apenas sobre aluguel+horas, recibo imutável discriminado,
+    webhook idempotente cobrindo refund/chargeback/deposit events,
+    bloqueio de conta do locatário em chargeback, lock serializável
+    cancelamento ↔ caução.
   contact:
     name: Canteiro
     url: https://canteiro.brenon.cloud
@@ -32,6 +39,8 @@ tags:
     description: Tenant reservations and receipts (F3)
   - name: payments
     description: Payment authorization webhook (F3)
+  - name: cancellations
+    description: Cancellation policy + liquidation (F4)
 paths:
   /healthz:
     get:
@@ -910,6 +919,87 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /rentals/{id}/cancellations:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: CreateRentalCancellation
+      tags: [cancellations]
+      summary: Cancel a rental (tenant, owner, or platform)
+      description: |
+        Applies the F4 cancellation policy (AC-1..AC-8). The caller
+        must be the tenant, the listing owner, or a platform operator.
+        The classification is purely declarative — derived from
+        (actor, time-to-pickup, started?, operator identity) — and
+        the resulting split (aluguel/horas/caução) and commission
+        (12% over rent+operator, deposit always out) is persisted as
+        an immutable cancellation record + receipt.
+        The rental moves to `cancellation_in_progress` and then to
+        `cancelled` (terminal). Idempotent: a second call with the
+        same `actor_kind` returns the existing record (409 if
+        `actor_kind` differs).
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRentalCancellationRequest"
+      responses:
+        "200":
+          description: Cancellation accepted (idempotent replay)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RentalCancellation"
+        "201":
+          description: Cancellation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RentalCancellation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+    get:
+      operationId: GetRentalCancellation
+      tags: [cancellations]
+      summary: Get the cancellation record (immutable, both parties)
+      description: |
+        Returns the cancellation record once a rental was cancelled.
+        Visible to the tenant and the listing owner. Returns 404
+        when no cancellation exists yet. The record is immutable:
+        correction is a new event referencing the original.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Cancellation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RentalCancellation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /payments/webhook:
     post:
       operationId: PaymentWebhook
@@ -990,7 +1080,7 @@ components:
           description: Account id (UUID)
         status:
           type: string
-          enum: [incomplete, active, deactivated]
+          enum: [incomplete, active, deactivated, blocked]
         display_name:
           type: string
         phone:
@@ -1432,7 +1522,7 @@ components:
           type: string
     RentalState:
       type: string
-      enum: [pending, authorized, confirmed, declined, expired, cancelled, refunded]
+      enum: [pending, authorized, confirmed, declined, expired, cancelled, cancellation_in_progress, refunded]
     Rental:
       type: object
       required:
@@ -1673,6 +1763,131 @@ components:
         issued_at:
           type: string
           format: date-time
+        # F4 — AC-11 immutable liquidation receipt.
+        actor_kind:
+          type: string
+          enum: [tenant, owner, platform, operator]
+          description: Who triggered the cancellation (F4). Empty when no cancellation.
+        window_applied:
+          type: string
+          description: |
+            F4 declarative window code (e.g. "tenant.pre_accept",
+            "tenant.ge_24h", "tenant.lt_24h", "tenant.after_start",
+            "owner.pre_pickup", "owner.after_start").
+          example: "tenant.ge_24h"
+        cancellation_fee_cents:
+          type: integer
+          minimum: 0
+          description: F4 cancellation fee (10% of rent in the >=24h window).
+        tenant_refund_cents:
+          type: integer
+          description: Net amount refunded to the tenant after fee + commission.
+        owner_payout_cents_after_cancellation:
+          type: integer
+          description: Owner payout net of commission (zero when rent fully refunded).
+        operator_payout_cents_after_cancellation:
+          type: integer
+          description: Operator payout (third-party operator; zero when operator=owner).
+        deposit_state:
+          type: string
+          enum: [released, captured, partial, held]
+          description: |
+            F4 deposit state in the receipt: released (default), captured
+            (fully), partial (partially), held (still held; F5 will decide).
+        deposit_capture_cents:
+          type: integer
+          minimum: 0
+        deposit_release_cents:
+          type: integer
+          minimum: 0
+        deposit_partial_capture_cents:
+          type: integer
+          minimum: 0
+        processor_operation_id:
+          type: string
+          description: PSP-side operation id (refund, chargeback, deposit capture).
+        cancellation_issued_at:
+          type: string
+          format: date-time
+    RentalCancellation:
+      type: object
+      required:
+        - id
+        - rental_id
+        - actor_account_id
+        - actor_kind
+        - window_applied
+        - state_deposit
+        - cancellation_fee_cents
+        - tenant_refund_cents
+        - owner_payout_cents_after_cancellation
+        - operator_payout_cents_after_cancellation
+        - deposit_capture_cents
+        - deposit_release_cents
+        - deposit_partial_capture_cents
+        - issued_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        rental_id:
+          type: string
+          format: uuid
+        actor_account_id:
+          type: string
+          format: uuid
+        actor_kind:
+          type: string
+          enum: [tenant, owner, platform, operator]
+        window_applied:
+          type: string
+          description: Declarative F4 window code (see RentalReceipt.window_applied).
+        state_deposit:
+          type: string
+          enum: [released, captured, partial, held]
+        cancellation_fee_cents:
+          type: integer
+          minimum: 0
+        tenant_refund_cents:
+          type: integer
+        owner_payout_cents_after_cancellation:
+          type: integer
+        operator_payout_cents_after_cancellation:
+          type: integer
+        deposit_capture_cents:
+          type: integer
+          minimum: 0
+        deposit_release_cents:
+          type: integer
+          minimum: 0
+        deposit_partial_capture_cents:
+          type: integer
+          minimum: 0
+        processor_operation_id:
+          type: string
+        reversal_reason:
+          type: string
+          description: Set when this cancellation is a chargeback reversal.
+        issued_at:
+          type: string
+          format: date-time
+    CreateRentalCancellationRequest:
+      type: object
+      required: [actor_kind]
+      properties:
+        actor_kind:
+          type: string
+          enum: [tenant, owner, platform, operator]
+        reason:
+          type: string
+          maxLength: 240
+        processor_operation_id:
+          type: string
+          description: |
+            Optional PSP-side operation id that triggered the
+            cancellation (refund, chargeback). When the request comes
+            from a webhook handler, this is the event id; idempotent
+            on (rental_id, actor_kind, processor_operation_id).
     PaymentIntent:
       type: object
       required:
@@ -1732,7 +1947,15 @@ components:
           type: string
         type:
           type: string
-          enum: [payment.authorized, payment.failed, payment.refunded]
+          enum:
+            - payment.authorized
+            - payment.failed
+            - payment.refunded
+            - payment.refund_settled
+            - payment.chargeback_created
+            - payment.deposit_captured
+            - payment.deposit_released
+            - payment.deposit_partial_captured
         data:
           type: object
           required: [rental_id, amount_cents]
@@ -1749,6 +1972,16 @@ components:
             deposit_cents:
               type: integer
               minimum: 0
+            deposit_state:
+              type: string
+              enum: [released, captured, partial]
+              description: |
+                F4 deposit event — only set for deposit.* and
+                refund_settled/chargeback events. Required for
+                deposit events; ignored otherwise.
+            chargeback_reason:
+              type: string
+              description: Set only on chargeback events.
             failure_code:
               type: string
             failure_message:
