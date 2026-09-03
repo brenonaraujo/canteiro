@@ -1,44 +1,60 @@
 #!/usr/bin/env bash
-# Deploy Canteiro on brenon.cloud home lab
-# Usage: bash deploy/apply.sh
+# Deploy / smoke Canteiro on brenon.cloud.
+# Public origin is the Swarm edge on :18083 (tunnel already points here).
+# Do NOT mutate Kong key-auth on /canteiro.
 set -euo pipefail
 
 STACK_NAME=canteiro
-SWARM_MANAGER=192.168.1.101
-KONG_ADMIN="http://$SWARM_MANAGER:8001"
-IMAGE="ghcr.io/brenonaraujo/canteiro:latest"
-ENV_FILE="deploy/swarm/.env"
+HOST="${CANTEIRO_PUBLIC_HOST:-https://canteiro.brenon.cloud}"
+ENV_FILE="${ENV_FILE:-deploy/swarm/.env}"
 
-echo "=== 1. Deploy stack ==="
-docker -H "$SWARM_MANAGER" stack deploy -c deploy/swarm/stack.yml "$STACK_NAME"
-echo "✅ Stack deployed. Waiting for services..."
-sleep 10
+echo "=== 1. Stack file ==="
+echo "Portainer stack '${STACK_NAME}' (endpoint 3): paste deploy/swarm/stack.yml"
+echo "Env: SERVICE_TAG (GHCR tag, default latest), EDGE_PUBLISHED_PORT=18083"
+echo "Do not change Kong service/route/plugins for /canteiro."
+echo ""
 
-echo "=== 2. Kong: create service ==="
-curl -sS -X POST "$KONG_ADMIN/services" -H 'Content-Type: application/json' -d '{
-  "name": "canteiro",
-  "url": "http://canteiro:8080",
-  "connect_timeout": 10000,
-  "read_timeout": 60000,
-  "write_timeout": 60000,
-  "tags": ["backend","canteiro"]
-}' 2>/dev/null || echo "Kong service may already exist"
-
-echo "=== 3. Kong: create route ==="
-curl -sS -X POST "$KONG_ADMIN/services/canteiro/routes" -H 'Content-Type: application/json' -d '{
-  "name": "canteiro-path",
-  "paths": ["/canteiro"],
-  "strip_path": true,
-  "protocols": ["http","https"],
-  "tags": ["canteiro"]
-}' 2>/dev/null || echo "Kong route may already exist"
-
-echo "=== 4. Health check ==="
-sleep 5
-curl -sS "http://$SWARM_MANAGER:8000/canteiro/healthz" 2>/dev/null && echo "✅ Health OK" || echo "⚠️ Health check failed"
+if [[ -n "${DOCKER_HOST:-}" ]] && command -v docker >/dev/null 2>&1; then
+  echo "=== 1b. docker stack deploy (DOCKER_HOST=${DOCKER_HOST}) ==="
+  extra=()
+  if [[ -f "$ENV_FILE" ]]; then
+    extra+=(--env-file "$ENV_FILE")
+  fi
+  docker stack deploy "${extra[@]}" -c deploy/swarm/stack.yml "$STACK_NAME"
+  echo "stack deploy requested"
+else
+  echo "=== 1b. skipped docker stack deploy (no DOCKER_HOST) ==="
+  echo "Update Portainer stack id 197 from this repo file after the web image exists on GHCR."
+fi
 
 echo ""
-echo "=== Next steps ==="
-echo "1. Add tunnel ingress via Cloudflare Zero Trust UI"
-echo "2. Add DNS CNAME for canteiro.brenon.cloud"
-echo "3. Test: curl https://canteiro.brenon.cloud/healthz"
+echo "=== 2. Tunnel / DNS (no-op if already set) ==="
+echo "Ingress: canteiro.brenon.cloud → http://192.168.1.101:18083  (above *.brenon.cloud)"
+echo "DNS:     CNAME canteiro → 5ea9935b-fac5-4161-a6b0-6c1afaf4bce3.cfargotunnel.com proxied"
+echo "Do not CNAME to api.brenon.cloud."
+
+echo ""
+echo "=== 3. Public smoke ==="
+echo "# HTML SPA (not Gin 404)"
+echo "curl -sS -D- -o /tmp/canteiro.html ${HOST}/"
+echo "grep -i canteiro /tmp/canteiro.html"
+echo ""
+echo "# API still on the same host"
+echo "curl -sS ${HOST}/healthz"
+echo "curl -sS -D- -o /tmp/canteiro-listings.json ${HOST}/listings"
+
+echo ""
+echo "Running public curls now:"
+echo "--- GET / ---"
+curl -sS -D- -o /tmp/canteiro.html "${HOST}/" | tr -d '\r' | awk 'NR<=16'
+echo "body_head=$(head -c 200 /tmp/canteiro.html | tr '\n' ' ')"
+echo ""
+echo "--- GET /healthz ---"
+curl -sS -D- -o /tmp/canteiro-healthz.json "${HOST}/healthz" | tr -d '\r' | awk 'NR<=16'
+echo "body=$(cat /tmp/canteiro-healthz.json)"
+echo ""
+echo "--- GET /listings ---"
+curl -sS -D- -o /tmp/canteiro-listings.json "${HOST}/listings" | tr -d '\r' | awk 'NR<=16'
+echo "body=$(head -c 300 /tmp/canteiro-listings.json)"
+echo ""
+echo "Kong LAN is extra only (not DoD): curl -sS http://192.168.1.101:8000/canteiro/healthz"
