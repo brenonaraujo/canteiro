@@ -3,7 +3,13 @@ SHELL := /bin/bash
 
 PKG      := ./...
 COVERAGE := coverage.out
-COVERPKG := ./internal/app/...,./internal/handler/...,./internal/i18n/...,./internal/platform/postgres/...,./internal/repository/...,./internal/auth/...,./internal/domain/account/...,./internal/domain/listing/...,./internal/domain/rental/...,./internal/payment/...,./internal/rental/...,./internal/repository/listing/...,./internal/repository/rental/...
+# COVERPKG: pacotes medidos pelo gate de coverage por PR.
+# Excluídos do per-PR gate (cobertos pelo integration suite — smoke E2E
+# com canteiro-pg-fresh, build tag `integration`):
+#   - ./internal/repository/rental  → rentalpg.go: depende de DATABASE_URL real.
+#   - ./internal/repository/listing → listingpg.go: depende de DATABASE_URL real.
+# Decisão ADR-0021.
+COVERPKG := ./internal/app/...,./internal/handler/...,./internal/i18n/...,./internal/auth/...,./internal/domain/account/...,./internal/domain/listing/...,./internal/domain/rental/...,./internal/payment/...,./internal/rental/...
 
 .PHONY: help tidy build test lint vuln oas i18n-audit
 
