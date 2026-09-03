@@ -6,6 +6,6 @@ defineOptions({ name: 'HomePage' })
   <div>
     <HomeHero />
     <HomeHighlights />
-    <HomeSoon />
+    <HomeMarket />
   </div>
 </template>

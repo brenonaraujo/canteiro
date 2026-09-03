@@ -5,9 +5,8 @@ const { t } = useI18n()
 
 const navItems = computed(() => [
   { label: t('nav.home'), to: '/' },
-  { label: t('nav.highlights'), to: '#highlights' },
   { label: t('breadcrumb.listings'), to: '/listings' },
-  { label: t('breadcrumb.rentals'), to: '/account/rentals' }
+  { label: t('nav.highlights'), to: '/#highlights' }
 ])
 </script>
 
@@ -36,8 +35,15 @@ const navItems = computed(() => [
         orientation="vertical"
         class="-mx-2"
       />
-      <div class="flex flex-col gap-4 mt-4">
-        <AccountMenu />
+      <div class="mt-4 flex flex-col gap-4">
+        <UButton
+          to="/auth/login"
+          color="neutral"
+          variant="ghost"
+          class="min-h-11 justify-start"
+        >
+          {{ t('nav.sign_in') }}
+        </UButton>
         <div class="flex items-center gap-2">
           <LocaleSwitcher />
           <UColorModeButton :aria-label="t('a11y.color_mode')" />

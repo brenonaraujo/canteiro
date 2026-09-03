@@ -17,14 +17,15 @@
     "es": "Español"
   },
   "a11y": {
-    "color_mode": "Toggle color mode"
+    "color_mode": "Toggle color mode",
+    "logo": "Canteiro home"
   },
   "landing": {
     "hero": {
-      "badge": "canteiro.brenon.cloud",
+      "badge": "Peer-to-peer equipment rental",
       "title": "Idle tools, working jobs",
       "tagline": "List what sits unused. Rent what you need. Deposit and payment stay on the platform.",
-      "cta": "See what's coming"
+      "cta": "Browse the catalog"
     },
     "highlights": {
       "title": "One marketplace, three roles",
@@ -41,9 +42,12 @@
         "desc": "We orchestrate payment, hold the deposit, and mediate damage claims."
       }
     },
-    "soon": {
-      "title": "Under construction",
-      "body": "Catalog and bookings ship in later slices. This is the public product address."
+    "market": {
+      "title": "On the yard now",
+      "empty_title": "The yard is open",
+      "empty_body": "Search published listings or list a machine. Payment and deposit stay on the platform.",
+      "view_all": "See all listings",
+      "publish": "List equipment"
     }
   },
   "footer": {
@@ -75,7 +79,10 @@
       "description": "Use your Google account. There is no sign-up without Google in v1.",
       "google": "Sign in with Google",
       "google_only": "v1 identity is Google only. There is no platform password.",
-      "catalog_hint": "You can still browse the public catalog without signing in."
+      "catalog_hint": "You can still browse the public catalog without signing in.",
+      "unavailable_title": "Google sign-in is unavailable",
+      "unavailable_body": "You can still browse the public catalog. A Google account is only needed to book or list.",
+      "browse_catalog": "Browse the catalog"
     },
     "callback": {
       "working": "Checking your Google identity…",
@@ -176,7 +183,7 @@
       "description": "Description",
       "unavailable": "Unavailable on these dates",
       "unavailable_empty": "No blocks declared by the owner yet.",
-      "identity_note": "Identity and contact only show after the reservation is accepted (next phase)."
+      "identity_note": "Identity and contact only show after the reservation is accepted."
     },
     "owner": {
       "title": "My listings",
