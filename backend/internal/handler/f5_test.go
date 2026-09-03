@@ -224,10 +224,50 @@ func TestF5Handler_StaffResolveDamage_RejectsMissingNote(t *testing.T) {
 func TestF5Handler_SettleDebt_HappyPath(t *testing.T) {
 	debts := &f5DebtSvc{settled: rental.Debt{ID: "id-1", State: rental.DebtSettled, OriginalCents: 5000, SettledCents: 5000}}
 	h := newF5Harness(t, &f5ReturnSvc{}, &f5DamageSvc{}, debts)
-	w := doReq(t, h, "POST", "/debt/"+uuid.NewString()+"/settle", `{}`)
+	// SettledCents is required by the v1 contract (B2 fix). Empty body
+	// must be rejected with 400 invalid_request.
+	w := doReq(t, h, "POST", "/debt/"+uuid.NewString()+"/settle", `{"settled_cents":5000}`)
 	require.Equal(t, http.StatusOK, w.Code)
 	body := mustJSON(t, w)
 	require.Equal(t, "settled", body["state"])
+}
+
+// TestF5Handler_SettleDebt_RejectsMissingBody is the B2 regression: pre-fix
+// the endpoint accepted an empty body and the service always returned
+// ErrF5DebtAmountInvalid -> 422 because SettledCents was unset. Post-fix
+// the handler enforces a non-empty JSON body first (400), then validates
+// SettledCents > 0 (422).
+func TestF5Handler_SettleDebt_RejectsMissingBody(t *testing.T) {
+	h := newF5Harness(t, &f5ReturnSvc{}, &f5DamageSvc{}, &f5DebtSvc{})
+	w := doReq(t, h, "POST", "/debt/"+uuid.NewString()+"/settle", ``)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	body := mustJSON(t, w)
+	require.Equal(t, "invalid_request", body["code"])
+}
+
+// TestF5Handler_SettleDebt_RejectsZeroAmount covers the explicit >0 check
+// in the handler. The service would catch zero too, but the handler
+// short-circuits with a 422 carrying the right code/message key.
+func TestF5Handler_SettleDebt_RejectsZeroAmount(t *testing.T) {
+	h := newF5Harness(t, &f5ReturnSvc{}, &f5DamageSvc{}, &f5DebtSvc{})
+	w := doReq(t, h, "POST", "/debt/"+uuid.NewString()+"/settle", `{"settled_cents":0}`)
+	require.Equal(t, http.StatusUnprocessableEntity, w.Code)
+	body := mustJSON(t, w)
+	require.Equal(t, "debt_amount_invalid", body["code"])
+}
+
+// TestF5Handler_SettleDebt_ServiceRejectsMismatch covers the service-side
+// gate: the handler forwards a positive amount, but the service still
+// rejects if settled != remaining. This is the layer that actually
+// prevents double-settle / partial-settle attempts even when the client
+// sends a "valid" positive number that doesn't match.
+func TestF5Handler_SettleDebt_ServiceRejectsMismatch(t *testing.T) {
+	debts := &f5DebtSvc{err: rental.ErrF5DebtAmountInvalid}
+	h := newF5Harness(t, &f5ReturnSvc{}, &f5DamageSvc{}, debts)
+	w := doReq(t, h, "POST", "/debt/"+uuid.NewString()+"/settle", `{"settled_cents":5000}`)
+	require.Equal(t, http.StatusUnprocessableEntity, w.Code)
+	body := mustJSON(t, w)
+	require.Equal(t, "debt_amount_invalid", body["code"])
 }
 
 func TestF5Handler_ForgiveDebt_HappyPath(t *testing.T) {

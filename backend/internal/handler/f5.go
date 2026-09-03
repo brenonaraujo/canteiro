@@ -382,21 +382,23 @@ func (h *F5API) SettleDebt(c *gin.Context, id openapi_types.UUID) {
 	if !ok {
 		return
 	}
-	// The caller (handler) is expected to have captured the funds via the
-	// PSP. The service records the audit entry; the v1 model is single-shot
-	// (full remaining amount). The amount is looked up from the current
-	// debt to avoid trusting the client.
+	var req api.SettleDebtRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.writeErr(c, http.StatusBadRequest, "invalid_request", "f5.invalid_payload")
+		return
+	}
+	if req.SettledCents <= 0 {
+		h.writeErr(c, http.StatusUnprocessableEntity, "debt_amount_invalid", "f5.debt_amount_invalid")
+		return
+	}
+	// The service enforces SettledCents == remaining
+	// (original - forgiven - already settled) and returns ErrF5DebtAmountInvalid
+	// otherwise, which the error switch maps to 422 debt_amount_invalid.
 	got, err := h.debts.SettleDebt(c.Request.Context(), f5svc.SettleDebtInput{
-		DebtID: id.String(),
+		DebtID:       id.String(),
+		SettledCents: req.SettledCents,
 	})
 	if err != nil {
-		// SettleDebtInput.SettledCents is required by the service; if the
-		// request comes without an amount, the service will reject it. The
-		// handler-side logic to compute the remaining is below: the
-		// service exposes GetByID via DebtRepository which the handler
-		// does not depend on. For v1, the simplest correct path is to
-		// require the amount explicitly. The caller in the v1 UI flow
-		// knows the remaining from the listing screen.
 		h.writeServiceErr(c, err)
 		return
 	}

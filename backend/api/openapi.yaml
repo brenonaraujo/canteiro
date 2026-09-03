@@ -1221,6 +1221,12 @@ paths:
       summary: Mark a debt as paid (renter)
       security:
         - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleDebtRequest"
       responses:
         "200":
           description: Debt settled
@@ -2411,6 +2417,20 @@ components:
         reason:
           type: string
           minLength: 1
+    SettleDebtRequest:
+      type: object
+      required: [settled_cents]
+      properties:
+        settled_cents:
+          type: integer
+          format: int64
+          minimum: 1
+          description: |
+            Amount the renter is settling. Must equal the debt's
+            remaining (original - forgiven - already settled). The
+            service enforces the match server-side and rejects mismatches
+            with 422 debt_amount_invalid; the handler is a thin
+            pass-through.
   responses:
     BadRequest:
       description: Bad request
