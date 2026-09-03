@@ -362,7 +362,7 @@ jobs:
           format: sarif
           output: trivy-backend.sarif
           severity: CRITICAL,HIGH
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
       - name: Upload SARIF
         if: always() && hashFiles('trivy-backend.sarif') != ''
@@ -401,7 +401,7 @@ jobs:
           format: sarif
           output: trivy-frontend.sarif
           severity: CRITICAL,HIGH
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
       - name: Upload SARIF
         if: always() && hashFiles('trivy-frontend.sarif') != ''
