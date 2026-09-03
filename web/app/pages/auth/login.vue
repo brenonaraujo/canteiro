@@ -4,7 +4,7 @@ import { useAuth } from '~/composables/auth/useAuth'
 defineOptions({ name: 'AuthLoginPage' })
 
 const { t } = useI18n()
-const { startGoogle } = useAuth()
+const { startGoogle, errorKey, pending } = useAuth()
 
 const crumbs = computed(() => [
   { label: t('breadcrumb.home'), to: '/' },
@@ -23,6 +23,13 @@ const crumbs = computed(() => [
       >
         <div class="flex flex-col gap-6">
           <UAlert
+            v-if="errorKey"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-alert-triangle"
+            :title="t(errorKey)"
+          />
+          <UAlert
             color="neutral"
             variant="subtle"
             icon="i-lucide-info"
@@ -34,6 +41,8 @@ const crumbs = computed(() => [
             icon="i-lucide-log-in"
             class="min-h-11"
             block
+            :loading="pending"
+            :disabled="pending"
             @click="startGoogle"
           >
             {{ t('auth.login.google') }}
