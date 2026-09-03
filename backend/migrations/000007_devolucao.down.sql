@@ -1,4 +1,4 @@
--- Rollback for F5 migration 000006.
+-- Rollback for F5 migration 000007.
 DROP INDEX IF EXISTS dividas_due_at_idx;
 DROP INDEX IF EXISTS dividas_renter_state_idx;
 DROP TABLE IF EXISTS dividas;

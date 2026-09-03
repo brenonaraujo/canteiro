@@ -21,6 +21,9 @@ import (
 
 // --- minimal fakes for the F5 handler ---
 
+// fakes used only by handler tests.
+//
+//nolint:govet // test fakes: alignment is micro-optimization for in-memory
 type f5ReturnSvc struct {
 	created rental.Return
 	err     error
@@ -33,11 +36,12 @@ func (f *f5ReturnSvc) RegisterReturn(_ context.Context, _ string, _ rental.Evide
 	return f.created, f.err
 }
 
+//nolint:govet // test fake
 type f5DamageSvc struct {
-	opened rental.DamageClaim
+	opened    rental.DamageClaim
 	responded rental.DamageClaim
-	resolved rental.DamageClaim
-	err     error
+	resolved  rental.DamageClaim
+	err       error
 }
 
 func (f *f5DamageSvc) OpenDamageClaim(_ context.Context, _ f5svc.OpenDamageClaimInput) (rental.DamageClaim, error) {
@@ -50,6 +54,7 @@ func (f *f5DamageSvc) StaffResolve(_ context.Context, _ f5svc.StaffResolveInput)
 	return f.resolved, f.err
 }
 
+//nolint:govet // test fake
 type f5DebtSvc struct {
 	settled  rental.Debt
 	forgiven rental.Debt
