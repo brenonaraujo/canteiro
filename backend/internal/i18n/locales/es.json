@@ -36,6 +36,7 @@
   "rental.acceptance_expired": "La ventana de aceptación de 12h ha expirado. Se inició un reembolso total.",
   "rental.payment_mismatch": "El monto pagado difiere del total calculado. Pago rechazado.",
   "rental.tenant_has_debt": "Tiene una deuda de daños no pagada. Resuélvala o solicite perdón antes de reservar.",
+  "rental.debt.open_blocks_intent": "No se puede crear intención de alquiler mientras tengas una deuda abierta. Resuélvela o espera la resolución.",
   "rental.listing_unavailable": "Este anuncio no está disponible para reservar.",
   "rental.cancellation_forbidden": "Solo el inquilino, el propietario del anuncio o el agente de plataforma pueden cancelar esta reserva.",
   "rental.cancellation_invalid_actor": "Actor de cancelación inválido.",

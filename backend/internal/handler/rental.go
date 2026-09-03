@@ -87,6 +87,8 @@ func (h *RentalAPI) writeServiceErr(c *gin.Context, err error) bool {
 		h.writeErr(c, http.StatusUnprocessableEntity, "payment_mismatch", "rental.payment_mismatch")
 	case errors.Is(err, rental.ErrTenantHasDebt):
 		h.writeErr(c, http.StatusForbidden, "tenant_has_debt", "rental.tenant_has_debt")
+	case errors.Is(err, rental.ErrOpenDebt):
+		h.writeErr(c, http.StatusUnprocessableEntity, "open_debt", "rental.debt.open_blocks_intent")
 	case errors.Is(err, rental.ErrListingUnavailable):
 		h.writeErr(c, http.StatusConflict, "listing_unavailable", "rental.listing_unavailable")
 	default:

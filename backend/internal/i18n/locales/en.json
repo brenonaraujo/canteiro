@@ -36,6 +36,7 @@
   "rental.acceptance_expired": "The 12h acceptance window has expired. A full refund has been initiated.",
   "rental.payment_mismatch": "The amount paid differs from the calculated total. Payment rejected.",
   "rental.tenant_has_debt": "You have an unpaid damage balance. Settle it or request staff forgiveness before reserving.",
+  "rental.debt.open_blocks_intent": "Cannot create rental intent while you have an open debt. Please settle or wait for resolution.",
   "rental.listing_unavailable": "This listing is not available for reservation.",
   "rental.cancellation_forbidden": "Only the tenant, the listing owner, or the platform can cancel this reservation.",
   "rental.cancellation_invalid_actor": "Invalid cancellation actor.",

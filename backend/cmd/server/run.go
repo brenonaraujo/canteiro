@@ -63,6 +63,10 @@ func router(cfg *app.Config, logger *slog.Logger, checkers []repository.Checker,
 	f5DebtRepo := f5pg.NewDebtRepo(db)
 	rentalLookup := &rentalLookupAdapter{svc: rentalSvc}
 	f5Svc := f5svc.NewService(f5svc.Config{}, rentalLookup, f5ReturnRepo, f5DamageRepo, f5DebtRepo)
+	// Pilar 5: F3 CreateIntent refuses a new intent while the renter carries
+	// an open avaria debt. Wired after construction because f5Svc itself
+	// depends on rentalSvc for rental lookup.
+	rentalSvc.SetDebtGate(f5Svc)
 	f5API := handler.NewF5API(f5Svc, f5Svc, f5Svc, authAPI.CurrentAccountID)
 	return app.NewRouter(app.ServerOpts{
 		ServiceName: cfg.ServiceName,
