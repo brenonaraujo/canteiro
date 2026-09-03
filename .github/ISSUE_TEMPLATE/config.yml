@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SPEC funcional
+    url: https://github.com/brenonaraujo/canteiro/blob/main/docs/SPEC.md
+    about: Fonte de verdade do produto Canteiro.
+  - name: Contrato do harness
+    url: https://github.com/brenonaraujo/canteiro/blob/main/harness/PROJECT.md
+    about: Overlay do git-meta-harness (DoR, DoD, loop).

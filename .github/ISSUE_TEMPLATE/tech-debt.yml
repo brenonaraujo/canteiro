@@ -1,0 +1,82 @@
+name: Tech debt
+description: "Dívida técnica, control plane incompleto, ou limpeza sem mudança de produto."
+title: "type/tech-debt: "
+labels:
+  - triage
+  - type/tech-debt
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Caminho técnico: **pula** domain-expert. Vai para `solutions-architect`
+        e depois builder/devops. Use isto para harness, CI, templates, refactors.
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto
+      description: "O que existe hoje que precisa melhorar? Por que agora?"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Concretamente o que está ausente, sujo ou quebrado.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto
+      value: |
+        - Velocidade de desenvolvimento:
+        - Confiabilidade:
+        - Observabilidade:
+        - Segurança:
+        - Loop git-meta-harness:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta de solução
+      value: |
+        ### Alternativas
+        - **Opção A:**
+        - **Opção B:**
+        - **Opção C (recomendada):**
+    validations:
+      required: true
+  - type: checkboxes
+    id: components
+    attributes:
+      label: Componentes
+      options:
+        - label: backend
+        - label: frontend
+        - label: infra
+        - label: harness / .github
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Esforço
+      options:
+        - baixo (horas)
+        - médio (1-2 dias)
+        - alto (vários dias)
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking change
+      options:
+        - "não"
+        - "sim (precisa aprovação humana)"
+      default: 0
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Artefato canônico do git-meta-harness presente (se for control plane)
+        - [ ] Testes mantidos/atualizados
+        - [ ] Sensores verdes
+        - [ ] Sem regressão
+        - [ ] ADR-lite se houver decisão arquitetural
