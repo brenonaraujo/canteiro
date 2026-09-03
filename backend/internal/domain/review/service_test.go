@@ -398,7 +398,7 @@ func TestService_GetAggregate_EmptyWhenNoneInserted(t *testing.T) {
 func TestService_NewService_DefaultsUseRealClockAndIDGen(t *testing.T) {
 	// When Config.Now and Config.IDGen are nil, NewService wires the
 	// production defaults. Exercising the constructors here also
-	// touches the realClock.Now branch (service.go:39).
+	// touches the realClock.Now branch (see clock.go).
 	rentals := newFakeRentals()
 	repo := newFakeRepo()
 	svc := review.NewService(review.Config{}, rentals, repo)
@@ -411,6 +411,21 @@ func TestService_NewService_DefaultsUseRealClockAndIDGen(t *testing.T) {
 	require.NotNil(t, gen)
 	id := gen.String()
 	require.NotEmpty(t, id)
+}
+
+// TestRealClock_Now covers clock.go's realClock.Now() (was service.go:39
+// at 0%). The realClock type is unexported; we drive it via
+// review.RealClock() and assert the returned time is UTC and within
+// 5 seconds of the wall clock.
+func TestRealClock_Now(t *testing.T) {
+	clk := review.RealClock()
+	require.NotNil(t, clk)
+	before := time.Now().UTC().Add(-5 * time.Second)
+	now := clk.Now()
+	after := time.Now().UTC().Add(5 * time.Second)
+	require.Equal(t, time.UTC, now.Location(), "realClock.Now must return UTC")
+	require.False(t, now.Before(before), "now %v before wall-clock window %v", now, before)
+	require.False(t, now.After(after), "now %v after wall-clock window %v", now, after)
 }
 
 // TestService_ListReceivedReviews_RequiresRatee covers the empty-ratee
