@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -16,12 +17,26 @@ import (
 // RentalAPI wires the F3 rental endpoints. Mirrors the ListingAPI surface
 // (requireSession + writeServiceErr) so errors map 1:1 to i18n keys.
 type RentalAPI struct {
-	svc     *rentsvc.Service
+	svc     RentalService
 	current CurrentAccountFn
 }
 
+// RentalService is the slice of rental.Service the handler depends on.
+// Keeping the surface narrow lets tests inject fakes without standing up
+// the full service graph.
+type RentalService interface {
+	CreateIntent(ctx context.Context, in rentsvc.CreateIntentInput) (rental.Rental, rental.MoneyBreakdown, error)
+	ListForTenant(ctx context.Context, tenantID string) ([]rental.Rental, error)
+	Get(ctx context.Context, id string) (rental.Rental, error)
+	AuthorizeIntent(ctx context.Context, in rentsvc.AuthorizeIntentInput) (rentsvc.PaymentIntent, error)
+	Accept(ctx context.Context, in rentsvc.AcceptInput) (rental.Rental, error)
+	Decline(ctx context.Context, in rentsvc.DeclineInput) (rental.Rental, error)
+	CancelPreAuth(ctx context.Context, in rentsvc.CancelPreAuthInput) (rental.Rental, error)
+	GetReceipt(ctx context.Context, rentalID, tenantID string) (rental.Receipt, error)
+}
+
 // NewRentalAPI builds the rental adapter.
-func NewRentalAPI(svc *rentsvc.Service, current CurrentAccountFn) *RentalAPI {
+func NewRentalAPI(svc RentalService, current CurrentAccountFn) *RentalAPI {
 	if current == nil {
 		current = noSession
 	}

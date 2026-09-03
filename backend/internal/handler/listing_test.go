@@ -545,6 +545,195 @@ func TestUpdateOwnerOnboarding(t *testing.T) {
 	require.Equal(t, http.StatusOK, w3.Code)
 }
 
+func TestPatchOperatorViaUpdate(t *testing.T) {
+	// Exercises patchOperator (the unexported helper in listing.go).
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	create := httptest.NewRecorder()
+	body := `{"title":"Furadeira","description":"Furadeira de impacto 600W.","category":"electric","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":12000,"deposit_cents":8000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
+	creq, _ := http.NewRequest("POST", "/listings", strings.NewReader(body))
+	creq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(create, creq)
+	require.Equal(t, http.StatusCreated, create.Code)
+	w := httptest.NewRecorder()
+	patchBody := `{"operator":{"mode":"required","hourly_rate_cents":5000,"min_hours":4,"identity":{"name":"Carlos","phone":"+551****7777","is_owner":false}}}`
+	ureq, _ := http.NewRequest("PATCH", "/listings/11111111-1111-4111-8111-111111111111", strings.NewReader(patchBody))
+	ureq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, ureq)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestNoSession_ReturnsUnauthorized(t *testing.T) {
+	// Calling handler.NewListingAPI with nil current falls back to noSession.
+	gin.SetMode(gin.TestMode)
+	lookup := newAccountLookup()
+	repo := newFakeRepo()
+	api6 := handler.NewListingAPI(listing.NewService(repo, lookup, time.Now().UTC()), nil)
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: api6})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/listings", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSearchCatalog_WithFilters(t *testing.T) {
+	// Exercises parseSearchFilters branches for category + city + size.
+	svc := listing.NewService(newFakeRepo(), newAccountLookup(), time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	cat := listing.CategoryElectric
+	_, err := svc.CreateDraft(context.Background(), "owner-1", listing.Listing{
+		Title: "Furadeira", Description: "Furadeira de impacto 600W.",
+		Category: cat, PickupCity: "Sao Paulo", PickupNeighborhood: "x",
+		PriceUnit: listing.PriceDay, PriceAmountCents: 12000, DepositCents: 8000,
+		MinLeadTimeHours: 12, Photos: []string{"https://x/a.jpg"},
+	})
+	require.NoError(t, err)
+	api8 := handler.NewListingAPI(svc, func(c *gin.Context) (string, bool) { return "owner-1", true })
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: api8})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/listings?category=electric&city=Sao+Paulo&size=light", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestPauseListing_HappyPath(t *testing.T) {
+	// Exercises the Pause listing branch (was at 0% before).
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive, DisplayName: "Ana", Phone: "+551****9999"}
+	repo := newFakeRepo()
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	svc := listing.NewService(repo, lookup, now)
+	l := listing.Listing{
+		ID:                 "22222222-2222-4222-8222-222222222222",
+		OwnerAccountID:     "owner-1",
+		State:              listing.StateDraft,
+		Title:              "Furadeira",
+		Description:        "Furadeira de impacto 600W.",
+		Category:           listing.CategoryElectric,
+		PickupCity:         "SP",
+		PickupNeighborhood: "x",
+		PriceUnit:          listing.PriceDay,
+		PriceAmountCents:   12000,
+		DepositCents:       8000,
+		MinLeadTimeHours:   12,
+		Operator:           listing.Operator{Mode: listing.OperatorNone},
+		Photos:             []string{"https://x/a.jpg"},
+	}
+	_, err := repo.Create(context.Background(), l)
+	require.NoError(t, err)
+	_, err = repo.UpsertOwnerOnboarding(context.Background(), listing.OwnerOnboarding{
+		AccountID: "owner-1", PayoutKind: "pix", PayoutLast4: "1234",
+		TermsAcceptedAt: now, TermsVersion: "v1",
+	})
+	require.NoError(t, err)
+	api9 := handler.NewListingAPI(svc, func(c *gin.Context) (string, bool) { return "owner-1", true })
+	r2 := gin.New()
+	api.RegisterHandlers(r2, listingServer{api: api9})
+	pub := httptest.NewRecorder()
+	preq, _ := http.NewRequest("POST", "/listings/22222222-2222-4222-8222-222222222222/publish", nil)
+	r2.ServeHTTP(pub, preq)
+	require.Equal(t, http.StatusOK, pub.Code, "publish body: %s", pub.Body.String())
+	pause := httptest.NewRecorder()
+	pareq, _ := http.NewRequest("POST", "/listings/22222222-2222-4222-8222-222222222222/pause", nil)
+	r2.ServeHTTP(pause, pareq)
+	require.Equal(t, http.StatusOK, pause.Code)
+}
+
+func TestUpdateLocationPatchAndRulesPatch(t *testing.T) {
+	// Exercises applyLocationPatch + applyPricingPatch via PATCH.
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	create := httptest.NewRecorder()
+	body := `{"title":"Furadeira","description":"Furadeira de impacto 600W.","category":"electric","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":1000,"deposit_cents":5000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
+	creq, _ := http.NewRequest("POST", "/listings", strings.NewReader(body))
+	creq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(create, creq)
+	require.Equal(t, http.StatusCreated, create.Code)
+	w := httptest.NewRecorder()
+	patchBody := `{"pickup_city":"Sao Paulo","pickup_neighborhood":"Pinheiros","price_amount_cents":12345,"deposit_cents":6789,"rules":{"document_required":true,"min_age":25,"experience_required":true,"travel_restricted":true}}`
+	ureq, _ := http.NewRequest("PATCH", "/listings/11111111-1111-4111-8111-111111111111", strings.NewReader(patchBody))
+	ureq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, ureq)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestGetPublicCalendar_EmptyWindow(t *testing.T) {
+	// Exercises the GetPublicCalendar endpoint with default window.
+	lookup := newAccountLookup()
+	repo := newFakeRepo()
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	svc := listing.NewService(repo, lookup, now)
+	_, err := svc.CreateDraft(context.Background(), "owner-1", listing.Listing{
+		Title: "Furadeira", Description: "Furadeira de impacto 600W.",
+		Category: listing.CategoryElectric, PickupCity: "SP", PickupNeighborhood: "x",
+		PriceUnit: listing.PriceDay, PriceAmountCents: 1000, DepositCents: 5000,
+		MinLeadTimeHours: 12, Photos: []string{"https://x/a.jpg"},
+	})
+	require.NoError(t, err)
+	apiA := handler.NewListingAPI(svc, nil)
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: apiA})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/listings/11111111-1111-4111-8111-111111111111/calendar", nil)
+	r.ServeHTTP(w, req)
+	// Draft returns 404 on public calendar (per F2 spec).
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestListBlocks_Owner(t *testing.T) {
+	// Exercises the ListBlocks endpoint on an existing listing.
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	// Seed a draft via POST.
+	create := httptest.NewRecorder()
+	body := `{"title":"Furadeira","description":"Furadeira de impacto 600W.","category":"electric","pickup_city":"SP","pickup_neighborhood":"x","price_unit":"day","price_amount_cents":1000,"deposit_cents":5000,"min_lead_time_hours":12,"operator":{"mode":"none"},"photos":["https://x/a.jpg"]}`
+	creq, _ := http.NewRequest("POST", "/listings", strings.NewReader(body))
+	creq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(create, creq)
+	require.Equal(t, http.StatusCreated, create.Code)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/listings/11111111-1111-4111-8111-111111111111/blocks", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestListMineListings_Empty(t *testing.T) {
+	// Exercises the empty-tenant branch of ListMineListings.
+	lookup := newAccountLookup()
+	r := newRouter(t, "owner-1", lookup)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/listings", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestOwnerOnboarding_TermsNotAccepted(t *testing.T) {
+	// Exercises the GetOwnerOnboarding path when terms are not yet accepted.
+	lookup := newAccountLookup()
+	lookup.m["owner-1"] = account.Account{ID: "owner-1", Status: account.StatusActive}
+	r := newRouter(t, "owner-1", lookup)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/owner/onboarding", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestSearchCatalog_InvalidCategory(t *testing.T) {
+	// Exercises parseSearchFilters with a malformed category (returns empty page).
+	svc := listing.NewService(newFakeRepo(), newAccountLookup(), time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	apiB := handler.NewListingAPI(svc, nil)
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: apiB})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/listings?category=garbage&size=heavy", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
 // --- helpers ---------------------------------------------------------------
 
 type openapiUUIDReal = openapi_types.UUID
