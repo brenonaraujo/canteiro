@@ -1,0 +1,112 @@
+name: Feature
+description: Nova funcionalidade de negócio. Entra no fluxo domain-expert → architect → builder.
+title: "type/feature: "
+labels:
+  - triage
+  - type/feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issue principal de entrega. O `team-manager` aplica o ciclo
+        `triage → refined → ready → in-progress → in-review → qa → done`.
+        Fonte de verdade: `docs/SPEC.md` e `harness/PROJECT.md`.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumo
+      description: "1-2 frases do que esta feature entrega."
+      placeholder: O locatário consegue filtrar anúncios por cidade e datas.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivação
+      description: "Por que isso importa? Qual problema resolve? Link da issue pai, se houver."
+    validations:
+      required: true
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User story
+      value: |
+        **Como** <persona>,
+        **quero** <ação>,
+        **para que** <benefício>.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceite
+      description: Preenchidos pelo domain-expert. Cada AC deve ser testável.
+      value: |
+        - [ ] AC1
+        - [ ] AC2
+        - [ ] AC3
+    validations:
+      required: true
+  - type: textarea
+    id: edge-cases
+    attributes:
+      label: Casos de borda
+      value: |
+        - E1: <cenário> → <comportamento esperado>
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependências
+      description: "Use números de issue, não labels depends-on."
+      value: |
+        - Bloqueia:
+        - Bloqueado por:
+  - type: checkboxes
+    id: components
+    attributes:
+      label: Componentes
+      description: O team-manager aplica as labels backend/frontend/infra a partir disto.
+      options:
+        - label: backend
+        - label: frontend
+        - label: infra
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domínio
+      options:
+        - domain/canteiro
+        - não se aplica
+      default: 0
+  - type: textarea
+    id: technical-sketch
+    attributes:
+      label: Esboço técnico
+      description: Preenchido pelo solutions-architect.
+      value: |
+        - Componentes afetados:
+        - Endpoints/tabelas:
+        - Métricas:
+        - Breaking change: sim/não
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      description: Preenchido pelo solutions-architect.
+      value: |
+        - [ ] OpenAPI atualizado (se API)
+        - [ ] Migration criada (se schema)
+        - [ ] Testes (TDD, regressão)
+        - [ ] Sensores verdes
+        - [ ] Snapshot testável
+        - [ ] PR com "Como testar"
+        - [ ] https://canteiro.brenon.cloud serve o comportamento (não 404 de zona)
+  - type: textarea
+    id: how-to-test
+    attributes:
+      label: Como testar
+      description: Preenchido pelo builder.
+      value: |
+        ```bash
+        docker compose up -d
+        ```

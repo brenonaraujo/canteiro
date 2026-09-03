@@ -1,0 +1,97 @@
+name: Bug
+description: Defeito no produto ou no loop. Inclui regressão e falha em produção.
+title: "type/bug: "
+labels:
+  - triage
+  - type/bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Relate o comportamento observado com evidência (URL, status HTTP, logs).
+        O `team-manager` roteia `type/bug` de negócio pelo `domain-expert-canteiro`.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: O que aconteceu
+      description: Comportamento observado, em uma frase e depois o detalhe.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Como reproduzir
+      value: |
+        1.
+        2.
+        3.
+
+        ```bash
+        # comando ou curl que reproduz
+        ```
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severidade
+      options:
+        - "Crítica — sistema indisponível ou perda de dados"
+        - "Alta — feature principal quebrada"
+        - "Média — feature secundária quebrada, tem workaround"
+        - "Baixa — cosmético, polimento"
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Ambiente
+      options:
+        - prod (canteiro.brenon.cloud)
+        - local / compose
+        - CI
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: components
+    attributes:
+      label: Componentes
+      options:
+        - label: backend
+        - label: frontend
+        - label: infra
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs / evidência
+      description: "Cole status HTTP, JSON, screenshot path ou trecho de log. Sem segredos."
+      render: text
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto
+      value: |
+        - Usuários afetados:
+        - Workaround:
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: Causa raiz
+      description: Se conhecida. Senão o architect/builder preenche.
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Teste de regressão cobre o caso
+        - [ ] Fix implementado
+        - [ ] Sensores verdes
+        - [ ] Comportamento verificado no ambiente reportado
+        - [ ] Rollback planejado (se prod)
