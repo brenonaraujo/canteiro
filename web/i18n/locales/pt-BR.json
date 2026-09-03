@@ -1,6 +1,7 @@
 {
   "common": {
-    "app_name": "Canteiro"
+    "app_name": "Canteiro",
+    "cancel": "Cancelar"
   },
   "nav": {
     "home": "Início",
@@ -58,7 +59,15 @@
     "home": "Início",
     "sign_in": "Entrar",
     "account": "Conta",
-    "deactivate": "Desativar"
+    "deactivate": "Desativar",
+    "listings": "Catálogo",
+    "listing": "Anúncio",
+    "account_listings": "Meus anúncios",
+    "listing_new": "Novo anúncio",
+    "listing_edit": "Editar anúncio",
+    "rentals": "Minhas locações",
+    "rental": "Locação",
+    "rental_receipt": "Recibo"
   },
   "auth": {
     "login": {
@@ -102,21 +111,6 @@
       "generic": "Não foi possível concluir. Tente de novo.",
       "deactivated": "Esta conta foi desativada e não reabre no v1."
     }
-  },
-  "common": {
-    "app_name": "Canteiro",
-    "cancel": "Cancelar"
-  },
-  "breadcrumb": {
-    "home": "Início",
-    "sign_in": "Entrar",
-    "account": "Conta",
-    "deactivate": "Desativar",
-    "listings": "Catálogo",
-    "listing": "Anúncio",
-    "account_listings": "Meus anúncios",
-    "listing_new": "Novo anúncio",
-    "listing_edit": "Editar anúncio"
   },
   "listing": {
     "search": {
@@ -290,11 +284,6 @@
       "payout_not_set": "Cadastre os dados de recebimento antes de publicar.",
       "gates_failed": "Corrija os requisitos abaixo antes de publicar."
     }
-  },
-  "breadcrumb": {
-    "rentals": "Minhas locações",
-    "rental": "Locação",
-    "rental_receipt": "Recibo"
   },
   "rental": {
     "list": {

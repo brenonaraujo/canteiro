@@ -1,6 +1,7 @@
 {
   "common": {
-    "app_name": "Canteiro"
+    "app_name": "Canteiro",
+    "cancel": "Cancel"
   },
   "nav": {
     "home": "Home",
@@ -58,7 +59,15 @@
     "home": "Home",
     "sign_in": "Sign in",
     "account": "Account",
-    "deactivate": "Deactivate"
+    "deactivate": "Deactivate",
+    "listings": "Catalog",
+    "listing": "Listing",
+    "account_listings": "My listings",
+    "listing_new": "New listing",
+    "listing_edit": "Edit listing",
+    "rentals": "My rentals",
+    "rental": "Rental",
+    "rental_receipt": "Receipt"
   },
   "auth": {
     "login": {
@@ -102,21 +111,6 @@
       "generic": "Could not finish. Please try again.",
       "deactivated": "This account is deactivated and does not reopen in v1."
     }
-  },
-  "common": {
-    "app_name": "Canteiro",
-    "cancel": "Cancel"
-  },
-  "breadcrumb": {
-    "home": "Home",
-    "sign_in": "Sign in",
-    "account": "Account",
-    "deactivate": "Deactivate",
-    "listings": "Catalog",
-    "listing": "Listing",
-    "account_listings": "My listings",
-    "listing_new": "New listing",
-    "listing_edit": "Edit listing"
   },
   "listing": {
     "search": {
@@ -290,11 +284,6 @@
       "payout_not_set": "Set up your payout details before publishing.",
       "gates_failed": "Fix the requirements below before publishing."
     }
-  },
-  "breadcrumb": {
-    "rentals": "My rentals",
-    "rental": "Rental",
-    "rental_receipt": "Receipt"
   },
   "rental": {
     "list": {

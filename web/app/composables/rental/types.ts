@@ -92,9 +92,47 @@ export type RentalReceipt = {
   window_starts_at: string
   window_ends_at: string
   issued_at: string
+  // F4 AC-11 — immutable liquidation fields.
+  actor_kind?: RentalActor
+  window_applied?: string
+  cancellation_fee_cents?: number
+  tenant_refund_cents?: number
+  owner_payout_cents_after_cancellation?: number
+  operator_payout_cents_after_cancellation?: number
+  deposit_state?: 'released' | 'captured' | 'partial' | 'held'
+  deposit_capture_cents?: number
+  deposit_release_cents?: number
+  deposit_partial_capture_cents?: number
+  processor_operation_id?: string
+  cancellation_issued_at?: string
 }
 
 export type RentalActor = 'tenant' | 'owner' | 'platform' | 'system'
+
+// F4 deposit states are 'released' | 'captured' | 'partial' | 'held'.
+// In the tenant-facing UI we group 'held' under 'held' (still held; F5
+// will decide capture) and the other states map directly.
+export type DepositStatusUi = 'held' | 'released' | 'partial' | 'forfeit'
+
+export function mapDepositStatus(state: string | undefined): DepositStatusUi {
+  if (!state) return 'held'
+  if (state === 'captured') return 'forfeit'
+  if (state === 'released') return 'released'
+  if (state === 'partial') return 'partial'
+  return 'held'
+}
+
+export type RentalTotals = {
+  rent_cents: number
+  operator_cents: number
+  deposit_cents: number
+  total_cents: number
+  commission_cents: number
+  owner_payout_cents: number
+  operator_payout_cents: number
+  cancellation_fee_cents?: number
+  deposit_status?: DepositStatusUi
+}
 
 export type CancellationReceipt = {
   rental_id: string
