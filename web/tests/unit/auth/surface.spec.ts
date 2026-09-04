@@ -14,6 +14,14 @@ describe('auth surface', () => {
     expect(login.toLowerCase()).not.toContain('type="password"')
   })
 
+  it('shows a human alert on login when Google is not configured', () => {
+    const login = readApp('pages/auth/login.vue')
+    expect(login).toContain('v-if="errorKey"')
+    expect(login).toContain(':title="t(errorKey)"')
+    expect(login).toContain('UAlert')
+    expect(login.toLowerCase()).not.toContain('application/json')
+  })
+
   it('completes profile on a dedicated page with name and phone', () => {
     const profile = readApp('pages/auth/profile.vue')
     expect(profile).toContain('t(\'auth.profile.display_name\')')

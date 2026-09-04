@@ -272,3 +272,16 @@ func asMap(t *testing.T, w *httptest.ResponseRecorder) map[string]any {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &m))
 	return m
 }
+
+// assertNotConfigured503 is the F1/#25 contract: 503 envelope, i18n key,
+// human message, no provider secrets in the body.
+func assertNotConfigured503(t *testing.T, w *httptest.ResponseRecorder) {
+	t.Helper()
+	require.Equal(t, http.StatusServiceUnavailable, w.Code)
+	got := asMap(t, w)
+	require.Equal(t, "not_configured", got["code"])
+	require.Equal(t, "auth.not_configured", got["message_key"])
+	require.Equal(t, "Entrar com Google não está disponível.", got["message"])
+	require.NotContains(t, w.Body.String(), "client_secret")
+	require.NotContains(t, w.Body.String(), "GOOGLE_")
+}

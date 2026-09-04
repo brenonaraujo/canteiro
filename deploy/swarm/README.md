@@ -42,6 +42,38 @@ Do **not** CNAME this host to `api.brenon.cloud`. After this stack update the tu
 
 `NUXT_PUBLIC_API_BASE=""` — the SPA talks same-origin. Catalog data uses `/catalog/listings` (always API). Owner list uses `/listings` via `fetch`.
 
+## Google OAuth + session (runtime only)
+
+Google is a backing service (F3/F4). The API process does **not** require it to start.
+
+| Env | Where | Notes |
+|-----|--------|-------|
+| `GOOGLE_CLIENT_ID` | Portainer stack env | empty in git |
+| `GOOGLE_CLIENT_SECRET` | Portainer stack env | empty in git; never paste in issues |
+| `GOOGLE_REDIRECT_URL` | stack default | **must** match the OAuth client: `https://canteiro.brenon.cloud/auth/google/callback` |
+| `SESSION_SECRET` | Portainer stack env | empty in git; **≥ 16 bytes** (HMAC CSRF state) |
+| `WEB_APP_URL` | stack | `https://canteiro.brenon.cloud` |
+| `SESSION_COOKIE_SECURE` | stack | `true` on the public host |
+
+Copy `deploy/swarm/.env.example` → `deploy/swarm/.env` (gitignored) for a local `docker stack deploy`. Leave Google/session empty to boot without the provider.
+
+OAuth client (Google Cloud → Web application):
+
+- Authorized JavaScript origin: `https://canteiro.brenon.cloud`
+- Authorized redirect URI: `https://canteiro.brenon.cloud/auth/google/callback`
+
+### Smoke
+
+```bash
+curl -sS https://canteiro.brenon.cloud/healthz    # 200 even without Google
+curl -sS https://canteiro.brenon.cloud/readyz     # 200 even without Google
+curl -sSI --max-redirs 0 https://canteiro.brenon.cloud/auth/google
+# with backing: 302 Location https://accounts.google.com/o/oauth2/v2/auth?...
+# without:      503 JSON not_configured (SPA must show auth.not_configured)
+```
+
+Rollback of the backing: remove `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from Portainer stack env and update the stack. `/healthz` stays 200; login start returns 503 again.
+
 ## Rollback
 
 1. Remove `web` + `edge` from the stack.

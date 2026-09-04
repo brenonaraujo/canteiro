@@ -110,7 +110,8 @@
     "error": {
       "generic": "Could not finish. Please try again.",
       "deactivated": "This account is deactivated and does not reopen in v1."
-    }
+    },
+    "not_configured": "Google sign-in is not available."
   },
   "listing": {
     "search": {

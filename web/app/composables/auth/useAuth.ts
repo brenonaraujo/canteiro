@@ -10,6 +10,7 @@ import {
 } from './actions'
 import { googleStartUrl } from './api'
 import { createAccountClient } from './client'
+import { probeGoogleStart, startGoogleLogin } from './google'
 import {
   browserStorage,
   parseAuthQuery,
@@ -51,7 +52,7 @@ function bindAccount(
   })
   return {
     hydrate: () => hydrateAccount(store, client, storage),
-    startGoogle: () => navigateTo(googleStartUrl(apiBase), { external: true }),
+    startGoogle: () => startGoogleBound(store, apiBase),
     completeCallback: (query: Record<string, unknown>) => {
       return completeAuthCallback(store, client, storage, parseAuthQuery(query))
     },
@@ -64,5 +65,19 @@ function bindAccount(
       await deactivateAccount(store, client)
       await navigateTo('/')
     }
+  }
+}
+
+async function startGoogleBound(
+  store: ReturnType<typeof useAccountStore>,
+  apiBase: string
+) {
+  const result = await startGoogleLogin(
+    store,
+    () => probeGoogleStart((input, init) => globalThis.fetch(input, init), apiBase),
+    googleStartUrl(apiBase)
+  )
+  if (result.redirectTo) {
+    return navigateTo(result.redirectTo, { external: true })
   }
 }

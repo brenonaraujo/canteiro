@@ -23,10 +23,14 @@ services:
       SERVICE_NAME: canteiro
       DEFAULT_LOCALE: pt-BR
       SHUTDOWN_TIMEOUT: 30s
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URL: https://canteiro.brenon.cloud/auth/google/callback
-      SESSION_SECRET: ${SESSION_SECRET}
+      # Google + session: Portainer stack env / --env-file at deploy.
+      # Never bake secrets into this file or the image.
+      # Empty GOOGLE_* → GET /auth/google is 503; /healthz stays 200.
+      # SESSION_SECRET must be ≥ 16 bytes (HMAC state) when login is enabled.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-https://canteiro.brenon.cloud/auth/google/callback}
+      SESSION_SECRET: ${SESSION_SECRET:-}
       WEB_APP_URL: https://canteiro.brenon.cloud
       SESSION_COOKIE_NAME: canteiro_session
       SESSION_COOKIE_SECURE: "true"

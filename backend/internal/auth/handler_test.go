@@ -14,8 +14,7 @@ func TestStartGoogleAuth_NotConfigured(t *testing.T) {
 	require.NoError(t, loadI18n(t))
 	r := routerFor(&API{})
 	w := do(r, httptest.NewRequest(http.MethodGet, "/auth/google", nil))
-	require.Equal(t, http.StatusServiceUnavailable, w.Code)
-	assert.Contains(t, w.Body.String(), "auth.not_configured")
+	assertNotConfigured503(t, w)
 }
 
 func TestGoogleFlow_ProfileLogoutDeactivate(t *testing.T) {

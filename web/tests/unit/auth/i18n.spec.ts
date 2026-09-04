@@ -37,6 +37,7 @@ const required = [
   'auth.status.deactivated',
   'auth.error.generic',
   'auth.error.deactivated',
+  'auth.not_configured',
   'breadcrumb.home',
   'breadcrumb.sign_in',
   'breadcrumb.account',

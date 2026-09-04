@@ -110,7 +110,8 @@
     "error": {
       "generic": "Não foi possível concluir. Tente de novo.",
       "deactivated": "Esta conta foi desativada e não reabre no v1."
-    }
+    },
+    "not_configured": "Entrar com Google não está disponível."
   },
   "listing": {
     "search": {

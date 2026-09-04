@@ -10,6 +10,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGoogle_Configured(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		g    *Google
+		name string
+		want bool
+	}{
+		{name: "nil", want: false},
+		{name: "empty", g: &Google{}, want: false},
+		{name: "missing id", g: &Google{ClientSecret: "sec", RedirectURL: "http://x"}, want: false},
+		{name: "missing secret", g: &Google{ClientID: "cid", RedirectURL: "http://x"}, want: false},
+		{name: "missing redirect", g: &Google{ClientID: "cid", ClientSecret: "sec"}, want: false},
+		{name: "all set", g: &Google{ClientID: "cid", ClientSecret: "sec", RedirectURL: "http://x"}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.g.Configured())
+		})
+	}
+}
+
 func TestGoogle_AuthCodeURL(t *testing.T) {
 	t.Parallel()
 	g := &Google{
