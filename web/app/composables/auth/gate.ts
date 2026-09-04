@@ -22,3 +22,8 @@ export function guestRedirectTarget(
   }
   return null
 }
+
+export function googleAccessFailed(query: Record<string, unknown>): boolean {
+  const auth = query.auth
+  return auth === 'denied' || auth === 'error'
+}

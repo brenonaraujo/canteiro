@@ -35,7 +35,7 @@ export async function hydrateAccount(
   store: AccountMutator,
   client: AccountClient,
   storage: TokenStorage
-): Promise<void> {
+): Promise<'ready' | 'missing' | 'deactivated'> {
   store.setPending(true)
   try {
     const me = await client.fetchMe()
@@ -43,12 +43,14 @@ export async function hydrateAccount(
       writeAccessToken(storage, null)
       store.clear()
       store.setErrorKey('auth.error.deactivated')
-      return
+      return 'deactivated'
     }
     store.setAccount(me)
     store.setErrorKey(null)
+    return 'ready'
   } catch {
     store.clear()
+    return 'missing'
   } finally {
     store.setPending(false)
   }
@@ -67,7 +69,10 @@ export async function completeAuthCallback(
   if (parsed.accessToken) {
     writeAccessToken(storage, parsed.accessToken)
   }
-  await hydrateAccount(store, client, storage)
+  const status = await hydrateAccount(store, client, storage)
+  if (status === 'missing' && (parsed.sessionReady || parsed.accessToken)) {
+    store.setErrorKey('auth.callback.error')
+  }
   return parsed
 }
 

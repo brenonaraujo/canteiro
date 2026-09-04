@@ -17,6 +17,18 @@ describe('visitor catalog flow (#26)', () => {
     expect(catalog).toContain('ListingCard')
   })
 
+  it('keeps the catalog on the entry when Google access fails', () => {
+    const home = readApp('pages/index.vue')
+    expect(home).toContain('HomeAccessAlert')
+    expect(home).toContain('HomeMarket')
+    expect(home).not.toMatch(/UModal/)
+    const alert = readApp('components/feature/home/HomeAccessAlert.vue')
+    expect(alert).toContain('auth.callback.error')
+    expect(alert).toContain('auth.login.still_visitor')
+    expect(alert).toContain('to="/listings"')
+    expect(alert).not.toMatch(/UModal/)
+  })
+
   it('opens a public ficha without contact or other-renter identity', () => {
     const detail = readApp('pages/listings/[id].vue')
     const ficha = readApp('components/feature/listing/ListingFicha.vue')

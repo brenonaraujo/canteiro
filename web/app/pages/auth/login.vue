@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { googleAccessFailed } from '~/composables/auth/gate'
 import { useAuth } from '~/composables/auth/useAuth'
 
 defineOptions({ name: 'AuthLoginPage' })
@@ -15,6 +16,14 @@ const crumbs = computed(() => [
 const googleUnavailable = computed(() => {
   return route.query.error === 'not_configured'
 })
+
+const accessFailed = computed(() => {
+  return googleAccessFailed(route.query as Record<string, unknown>)
+})
+
+const failureKey = computed(() => {
+  return errorKey.value || (accessFailed.value ? 'auth.callback.error' : null)
+})
 </script>
 
 <template>
@@ -28,11 +37,12 @@ const googleUnavailable = computed(() => {
       >
         <div class="flex flex-col gap-6">
           <UAlert
-            v-if="errorKey"
+            v-if="failureKey"
             color="warning"
             variant="subtle"
             icon="i-lucide-alert-triangle"
-            :title="t(errorKey)"
+            :title="t(failureKey)"
+            :description="t('auth.login.still_visitor')"
           />
           <UAlert
             v-else-if="googleUnavailable"

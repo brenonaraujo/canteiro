@@ -16,8 +16,8 @@ describe('auth surface', () => {
 
   it('shows a human alert on login when Google is not configured', () => {
     const login = readApp('pages/auth/login.vue')
-    expect(login).toContain('v-if="errorKey"')
-    expect(login).toContain(':title="t(errorKey)"')
+    expect(login).toContain('v-if="failureKey"')
+    expect(login).toContain(':title="t(failureKey)"')
     expect(login).toContain('UAlert')
     expect(login.toLowerCase()).not.toContain('application/json')
   })

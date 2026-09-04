@@ -4,6 +4,7 @@ defineOptions({ name: 'HomePage' })
 
 <template>
   <div>
+    <HomeAccessAlert />
     <HomeHero />
     <HomeHighlights />
     <HomeMarket />

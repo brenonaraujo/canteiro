@@ -24,6 +24,7 @@ export const useCatalogStore = defineStore('listing-catalog', () => {
     try {
       page.value = await client.searchCatalog(filters)
     } catch (err) {
+      page.value = null
       errorKey.value = translateError(err)
     } finally {
       pending.value = false

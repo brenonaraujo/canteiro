@@ -23,9 +23,13 @@ const required = [
   'landing.market.empty_body',
   'landing.market.view_all',
   'landing.market.publish',
+  'landing.market.error_title',
+  'landing.market.error_body',
+  'landing.market.retry',
   'auth.login.unavailable_title',
   'auth.login.unavailable_body',
   'auth.login.browse_catalog',
+  'auth.login.still_visitor',
   'a11y.logo'
 ]
 

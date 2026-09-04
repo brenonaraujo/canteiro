@@ -17,6 +17,14 @@ describe('access failure perception (#26)', () => {
     expect(login).not.toMatch(/UModal/)
   })
 
+  it('tells the visitor they did not enter when Google denies or errors', () => {
+    const login = readApp('pages/auth/login.vue')
+    expect(login).toContain('accessFailed')
+    expect(login).toContain('auth.callback.error')
+    expect(login).toContain('auth.login.still_visitor')
+    expect(login).toContain('to="/listings"')
+  })
+
   it('still offers Google as the v1 identity action', () => {
     const login = readApp('pages/auth/login.vue')
     expect(login).toContain('startGoogle')
