@@ -18,6 +18,7 @@ the framework invariant. Do not replace framework rules with stack defaults.
 Spec in `docs/SPEC.md`, specialized domain-expert, labels, CI, `gmh loop doctor` green.
 
 ## DoD
-Sensors green, PR with "Como testar", human `validado` unless PROJECT.md waives it for test-lab merges.
+Sensors green, PR with "Como testar".
+Human `validado` is **waived** (test-lab): `qa` + MERGEABLE + CI green → squash merge, `done`, close. Do not idle waiting for a comment.
 
 Delivery does not count as released until `https://canteiro.brenon.cloud` serves the product (not a zone 404).
