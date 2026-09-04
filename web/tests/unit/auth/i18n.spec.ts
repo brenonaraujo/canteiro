@@ -13,6 +13,7 @@ const required = [
   'auth.login.google',
   'auth.login.google_only',
   'auth.login.catalog_hint',
+  'auth.login.still_visitor',
   'auth.callback.working',
   'auth.callback.error',
   'auth.profile.title',

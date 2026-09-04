@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -66,30 +67,41 @@ func HashToken(raw string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func setSessionCookie(w http.ResponseWriter, cfg CookieSettings, raw string) {
-	//nolint:gosec // G124 Secure is SESSION_COOKIE_SECURE (false on local HTTP)
+func setSessionCookie(w http.ResponseWriter, cfg CookieSettings, raw string, r *http.Request) {
+	writeSessionCookie(w, cfg, raw, int(cfg.ttl().Seconds()), r)
+}
+
+func clearSessionCookie(w http.ResponseWriter, cfg CookieSettings, r *http.Request) {
+	writeSessionCookie(w, cfg, "", -1, r)
+}
+
+func writeSessionCookie(w http.ResponseWriter, cfg CookieSettings, raw string, maxAge int, r *http.Request) {
+	//nolint:gosec // G124 Secure follows SESSION_COOKIE_SECURE or the request proto
 	http.SetCookie(w, &http.Cookie{
 		Name:     cfg.name(),
 		Value:    raw,
 		Path:     "/",
-		MaxAge:   int(cfg.ttl().Seconds()),
+		MaxAge:   maxAge,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   cfg.Secure,
+		Secure:   cfg.secureFor(r),
 	})
 }
 
-func clearSessionCookie(w http.ResponseWriter, cfg CookieSettings) {
-	//nolint:gosec // G124 Secure is SESSION_COOKIE_SECURE (false on local HTTP)
-	http.SetCookie(w, &http.Cookie{
-		Name:     cfg.name(),
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   cfg.Secure,
-	})
+// secureFor is true when env forces Secure or the request arrived over HTTPS
+// (direct TLS or X-Forwarded-Proto). The public host is HTTPS; local HTTP
+// stays Secure=false so the cookie is stored.
+func (c CookieSettings) secureFor(r *http.Request) bool {
+	if c.Secure {
+		return true
+	}
+	if r == nil {
+		return false
+	}
+	if r.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 }
 
 func rawCookie(r *http.Request, cfg CookieSettings) (string, error) {

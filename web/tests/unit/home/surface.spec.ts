@@ -40,4 +40,12 @@ describe('home surface (#26)', () => {
     expect(market.toLowerCase()).not.toContain('testimonial')
     expect(market).not.toMatch(/João|Maria|John Doe/)
   })
+
+  it('does not disguise a catalog fetch error as an empty yard', () => {
+    const market = readApp('components/feature/home/HomeMarket.vue')
+    expect(market).toContain('errorKey')
+    expect(market).toContain('landing.market.error_title')
+    expect(market).toContain('landing.market.retry')
+    expect(market).toContain('t(errorKey)')
+  })
 })

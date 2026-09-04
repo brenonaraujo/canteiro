@@ -47,7 +47,10 @@
       "empty_title": "El patio está abierto",
       "empty_body": "Busca anuncios publicados o publica una máquina. Pago y fianza quedan en la plataforma.",
       "view_all": "Ver todos los anuncios",
-      "publish": "Publicar equipo"
+      "publish": "Publicar equipo",
+      "error_title": "No se pudo cargar el catálogo",
+      "error_body": "La búsqueda pública falló. Inténtalo de nuevo — puedes consultar el catálogo sin entrar.",
+      "retry": "Intentar de nuevo"
     }
   },
   "footer": {
@@ -82,7 +85,8 @@
       "catalog_hint": "Puedes consultar el catálogo público sin entrar.",
       "unavailable_title": "Entrar con Google no está disponible",
       "unavailable_body": "Aún puedes consultar el catálogo público. La cuenta de Google solo se pide para reservar o publicar.",
-      "browse_catalog": "Ver catálogo"
+      "browse_catalog": "Ver catálogo",
+      "still_visitor": "Sigues como visitante. El catálogo público sigue disponible."
     },
     "callback": {
       "working": "Validando tu identidad de Google…",

@@ -147,6 +147,56 @@ describe('auth actions', () => {
     expect(store.snapshot().account?.id).toBe('acc-2')
   })
 
+  it('keeps the visitor and explains the miss when auth=ok does not establish a session', async () => {
+    const store = fakeStore()
+    const storage = memoryStorage()
+    const parsed = await completeAuthCallback(
+      store,
+      jsonClient(storage, async () => new Response(null, { status: 401 })),
+      storage,
+      { sessionReady: true }
+    )
+    expect(parsed.sessionReady).toBe(true)
+    expect(store.snapshot().account).toBeNull()
+    expect(store.snapshot().errorKey).toBe('auth.callback.error')
+  })
+
+  it('keeps the deactivated message when Google reopens a closed account', async () => {
+    const store = fakeStore()
+    const storage = memoryStorage()
+    await completeAuthCallback(
+      store,
+      jsonClient(storage, async () => Response.json({
+        id: 'acc-9',
+        status: 'deactivated',
+        display_name: 'Ana',
+        phone: '1199'
+      })),
+      storage,
+      { sessionReady: true }
+    )
+    expect(store.snapshot().account).toBeNull()
+    expect(store.snapshot().errorKey).toBe('auth.error.deactivated')
+  })
+
+  it('does not call the account API when Google returns denied', async () => {
+    const store = fakeStore()
+    const storage = memoryStorage()
+    let called = false
+    await completeAuthCallback(
+      store,
+      jsonClient(storage, async () => {
+        called = true
+        return new Response(null, { status: 200 })
+      }),
+      storage,
+      { error: 'denied' }
+    )
+    expect(called).toBe(false)
+    expect(store.snapshot().account).toBeNull()
+    expect(store.snapshot().errorKey).toBe('auth.callback.error')
+  })
+
   it('rejects a blank profile before calling the API', async () => {
     const store = fakeStore()
     const storage = memoryStorage()

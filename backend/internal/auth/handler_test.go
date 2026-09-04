@@ -34,12 +34,18 @@ func TestGoogleFlow_ProfileLogoutDeactivate(t *testing.T) {
 	denied := do(r, httptest.NewRequest(http.MethodGet, "/auth/google/callback?error=access_denied", nil))
 	require.Equal(t, http.StatusFound, denied.Code)
 	assert.Contains(t, denied.Header().Get("Location"), "auth=denied")
+	for _, c := range denied.Result().Cookies() {
+		require.NotEqual(t, "canteiro_session", c.Name)
+	}
 
 	cb := "/auth/google/callback?code=ok-code&state=" + url.QueryEscape(state)
-	login := do(r, httptest.NewRequest(http.MethodGet, cb, nil))
+	httpsCB := httptest.NewRequest(http.MethodGet, cb, nil)
+	httpsCB.Header.Set("X-Forwarded-Proto", "https")
+	login := do(r, httpsCB)
 	require.Equal(t, http.StatusFound, login.Code)
 	assert.Contains(t, login.Header().Get("Location"), "auth=ok")
 	cookie := cookieValue(t, login, "canteiro_session")
+	require.True(t, cookieByName(t, login, "canteiro_session").Secure)
 	assertAccountLifecycle(t, r, st, cookie)
 }
 

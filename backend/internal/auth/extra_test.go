@@ -47,6 +47,21 @@ func TestRedirect_EmptyWebApp(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 	a.redirect(c, "ok")
 	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "/?auth=ok", w.Header().Get("Location"))
+}
+
+func TestRedirect_SameHostStaysRelative(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodGet, "https://canteiro.brenon.cloud/auth/google/callback", nil)
+	got := postAuthLocation("https://canteiro.brenon.cloud", req, "ok")
+	require.Equal(t, "/?auth=ok", got)
+}
+
+func TestRedirect_DifferentHostUsesWebApp(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost:8080/auth/google/callback", nil)
+	got := postAuthLocation("http://localhost:3000", req, "denied")
+	require.Equal(t, "http://localhost:3000/?auth=denied", got)
 }
 
 func TestWriteAccountErr_Internal(t *testing.T) {

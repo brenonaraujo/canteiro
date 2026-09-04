@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -735,6 +736,94 @@ func TestSearchCatalog_InvalidCategory(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/catalog/listings?category=garbage&size=heavy", nil)
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestGetPublicListing_StripsIdentity(t *testing.T) {
+	_, err := i18n.Load()
+	require.NoError(t, err)
+	repo := newFakeRepo()
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	_, err = repo.Create(context.Background(), listing.Listing{
+		ID: "33333333-3333-4333-8333-333333333333", OwnerAccountID: "owner-secret",
+		State: listing.StatePublished, Title: "Furadeira",
+		Description: "Furadeira de impacto 600W.", Category: listing.CategoryElectric,
+		PickupCity: "SP", PickupNeighborhood: "x", PriceUnit: listing.PriceDay,
+		PriceAmountCents: 12000, DepositCents: 8000, MinLeadTimeHours: 12,
+		Photos: []string{"https://x/a.jpg"},
+		Operator: listing.Operator{
+			Mode: listing.OperatorRequired, HourlyRateCents: 5000,
+			Identity: listing.OperatorIdentity{Name: "Carlos Operador", Phone: "+5511988887777"},
+		},
+	})
+	require.NoError(t, err)
+	svc := listing.NewService(repo, newAccountLookup(), now)
+	apiH := handler.NewListingAPI(svc, nil)
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: apiH})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/listings/33333333-3333-4333-8333-333333333333", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	require.NotContains(t, body, "owner-secret")
+	require.NotContains(t, body, "Carlos Operador")
+	require.NotContains(t, body, "+5511988887777")
+	require.NotContains(t, body, "owner_account")
+}
+
+func TestSearchCatalog_EmptyIsHonestPage(t *testing.T) {
+	_, err := i18n.Load()
+	require.NoError(t, err)
+	r := newRouter(t, "", newAccountLookup())
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/listings", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var page api.ListingPage
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
+	require.Empty(t, page.Items)
+	require.Equal(t, 0, page.Total)
+}
+
+func TestSearchCatalog_RepoErrorIs500(t *testing.T) {
+	_, err := i18n.Load()
+	require.NoError(t, err)
+	gin.SetMode(gin.TestMode)
+	wrapped := errSearchRepo{Repository: newFakeRepo(), err: errors.New("dial")}
+	svc := listing.NewService(wrapped, newAccountLookup(), time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	apiH := handler.NewListingAPI(svc, nil)
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: apiH})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/listings", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestListCategories_EmptyIsArray(t *testing.T) {
+	_, err := i18n.Load()
+	require.NoError(t, err)
+	gin.SetMode(gin.TestMode)
+	repo := newFakeRepo()
+	repo.cats = nil
+	svc := listing.NewService(repo, newAccountLookup(), time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	apiH := handler.NewListingAPI(svc, nil)
+	r := gin.New()
+	api.RegisterHandlers(r, listingServer{api: apiH})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/catalog/categories", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.JSONEq(t, "[]", w.Body.String())
+}
+
+type errSearchRepo struct {
+	listing.Repository
+	err error
+}
+
+func (e errSearchRepo) SearchCatalog(context.Context, listing.SearchFilters) ([]listing.Listing, int, error) {
+	return nil, 0, e.err
 }
 
 // --- helpers ---------------------------------------------------------------

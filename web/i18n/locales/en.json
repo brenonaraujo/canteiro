@@ -47,7 +47,10 @@
       "empty_title": "The yard is open",
       "empty_body": "Search published listings or list a machine. Payment and deposit stay on the platform.",
       "view_all": "See all listings",
-      "publish": "List equipment"
+      "publish": "List equipment",
+      "error_title": "Could not load the catalog",
+      "error_body": "Public search failed. Try again — you can still browse the catalog without signing in.",
+      "retry": "Try again"
     }
   },
   "footer": {
@@ -82,7 +85,8 @@
       "catalog_hint": "You can still browse the public catalog without signing in.",
       "unavailable_title": "Google sign-in is unavailable",
       "unavailable_body": "You can still browse the public catalog. A Google account is only needed to book or list.",
-      "browse_catalog": "Browse the catalog"
+      "browse_catalog": "Browse the catalog",
+      "still_visitor": "You remain a visitor. The public catalog is still available."
     },
     "callback": {
       "working": "Checking your Google identity…",
