@@ -18,6 +18,7 @@ func (a *API) StartGoogleAuth(c *gin.Context) {
 		a.writeErr(c, http.StatusServiceUnavailable, "not_configured", "auth.not_configured")
 		return
 	}
+	incLogin("start")
 	c.Redirect(http.StatusFound, a.deps.Google.AuthCodeURL(state))
 }
 
@@ -72,7 +73,7 @@ func (a *API) issueSession(c *gin.Context, accountID string) error {
 	if err := a.deps.Sessions.Create(sess); err != nil {
 		return err
 	}
-	setSessionCookie(c.Writer, a.deps.Cookie, raw)
+	setSessionCookie(c.Writer, a.deps.Cookie, raw, c.Request)
 	return nil
 }
 
@@ -95,7 +96,7 @@ func (a *API) Logout(c *gin.Context) {
 		return
 	}
 	_ = a.deps.Sessions.DeleteByTokenHash(HashToken(raw))
-	clearSessionCookie(c.Writer, a.deps.Cookie)
+	clearSessionCookie(c.Writer, a.deps.Cookie, c.Request)
 	incLogout()
 	c.Status(http.StatusNoContent)
 }

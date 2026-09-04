@@ -390,7 +390,7 @@ func publicListingToAPI(l listing.Listing) api.PublicListing {
 		PriceAmountCents:   int(l.PriceAmountCents),
 		DepositCents:       int(l.DepositCents),
 		MinLeadTimeHours:   l.MinLeadTimeHours,
-		Photos:             l.Photos,
+		Photos:             publicPhotos(l.Photos),
 		Rules: api.ListingRules{
 			DocumentRequired:   &l.Rules.DocumentRequired,
 			ExperienceRequired: &l.Rules.ExperienceRequired,
@@ -410,6 +410,13 @@ func publicListingToAPI(l listing.Listing) api.PublicListing {
 		out.DeliveryEnabled = &v
 	}
 	return out
+}
+
+func publicPhotos(photos []string) []string {
+	if photos == nil {
+		return []string{}
+	}
+	return photos
 }
 
 func listingPageToAPI(items []listing.Listing, page, size, total int) api.ListingPage {
@@ -684,6 +691,7 @@ func (l *ListingAPI) ListCategories(c *gin.Context) {
 func (l *ListingAPI) SearchCatalog(c *gin.Context, params api.SearchCatalogParams) {
 	f := parseSearchFilters(params)
 	items, total, err := l.svc.SearchCatalog(c.Request.Context(), f)
+	incCatalogSearch(catalogSearchResult(total, err))
 	if l.writeServiceErr(c, err) {
 		return
 	}

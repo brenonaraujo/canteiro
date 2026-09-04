@@ -321,7 +321,13 @@ func (r *Repo) GetPublic(ctx context.Context, id string) (listing.Listing, error
 	err := r.DB.WithContext(ctx).
 		Where("id = ? AND state = ?", id, string(listing.StatePublished)).
 		First(&row).Error
+	if isMissingRelation(err) {
+		return listing.Listing{}, listing.ErrNotFound
+	}
 	photos, perr := r.loadPhotos(ctx, id)
+	if isMissingRelation(perr) {
+		photos, perr = []string{}, nil
+	}
 	if perr != nil {
 		return listing.Listing{}, perr
 	}
@@ -479,6 +485,9 @@ func (r *Repo) CategoryConfig(ctx context.Context) ([]listing.CategoryConfig, er
 	if err := r.DB.WithContext(ctx).
 		Order("display_order ASC, category ASC").
 		Find(&rows).Error; err != nil {
+		if isMissingRelation(err) {
+			return []listing.CategoryConfig{}, nil
+		}
 		return nil, err
 	}
 	out := make([]listing.CategoryConfig, len(rows))
@@ -515,38 +524,76 @@ func (r *Repo) CategoryByName(ctx context.Context, c listing.Category) (listing.
 // are an availability window that excludes listings with overlapping blocks.
 func (r *Repo) SearchCatalog(ctx context.Context, f listing.SearchFilters) ([]listing.Listing, int, error) {
 	page, size := normalisePagination(f.Page, f.PageSize)
+	q := r.catalogQuery(ctx, f)
+	total, err := countCatalog(q)
+	if err != nil {
+		return publicCatalogErr(err)
+	}
+	rows, err := fetchCatalogPage(q, page, size)
+	if err != nil {
+		return publicCatalogErr(err)
+	}
+	return r.hydrateCatalog(ctx, rows, int(total))
+}
+
+func (r *Repo) catalogQuery(ctx context.Context, f listing.SearchFilters) *gorm.DB {
 	q := r.DB.WithContext(ctx).Model(&listingRow{}).
 		Where("state = ?", string(listing.StatePublished))
 	q = applyCatalogFilters(r.DB, q, f)
-	if !f.From.IsZero() && !f.To.IsZero() && f.From.Before(f.To) {
-		// Exclude listings with any block overlapping [from, to).
-		sub := r.DB.Model(&blockRow{}).
-			Select("listing_id").
-			Where("starts_at < ? AND ends_at > ?", f.To, f.From)
-		q = q.Where("id NOT IN (?)", sub)
+	if f.From.IsZero() || f.To.IsZero() || !f.From.Before(f.To) {
+		return q
 	}
+	sub := r.DB.Model(&blockRow{}).
+		Select("listing_id").
+		Where("starts_at < ? AND ends_at > ?", f.To, f.From)
+	return q.Where("id NOT IN (?)", sub)
+}
 
+func countCatalog(q *gorm.DB) (int64, error) {
 	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
+	err := q.Session(&gorm.Session{}).Count(&total).Error
+	return total, err
+}
 
+func fetchCatalogPage(q *gorm.DB, page, size int) ([]listingRow, error) {
 	var rows []listingRow
-	if err := q.Order("created_at DESC").
+	err := q.Order("created_at DESC").
 		Offset((page - 1) * size).
 		Limit(size).
-		Find(&rows).Error; err != nil {
-		return nil, 0, err
-	}
+		Find(&rows).Error
+	return rows, err
+}
+
+func (r *Repo) hydrateCatalog(ctx context.Context, rows []listingRow, total int) ([]listing.Listing, int, error) {
 	out := make([]listing.Listing, 0, len(rows))
 	for _, row := range rows {
 		photos, err := r.loadPhotos(ctx, row.ID)
+		if isMissingRelation(err) {
+			photos, err = []string{}, nil
+		}
 		if err != nil {
 			return nil, 0, err
 		}
 		out = append(out, toListing(row, photos))
 	}
-	return out, int(total), nil
+	return out, total, nil
+}
+
+func publicCatalogErr(err error) ([]listing.Listing, int, error) {
+	if isMissingRelation(err) {
+		return []listing.Listing{}, 0, nil
+	}
+	return nil, 0, err
+}
+
+func isMissingRelation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "42p01") ||
+		strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "undefined_table")
 }
 
 func normalisePagination(page, size int) (int, int) {

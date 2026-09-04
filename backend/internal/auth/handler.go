@@ -46,19 +46,30 @@ func (a *API) writeErr(c *gin.Context, status int, code, key string) {
 }
 
 func (a *API) redirect(c *gin.Context, result string) {
-	base := strings.TrimRight(a.deps.WebAppURL, "/")
-	if base == "" {
-		base = "/"
+	c.Redirect(http.StatusFound, postAuthLocation(a.deps.WebAppURL, c.Request, result))
+}
+
+func postAuthLocation(webApp string, r *http.Request, result string) string {
+	q := "auth=" + url.QueryEscape(result)
+	if samePublicHost(webApp, r) {
+		return "/?" + q
 	}
-	u, err := url.Parse(base)
-	if err != nil {
-		c.Status(http.StatusFound)
-		return
+	return strings.TrimRight(webApp, "/") + "/?" + q
+}
+
+func samePublicHost(webApp string, r *http.Request) bool {
+	if r == nil || strings.TrimSpace(webApp) == "" {
+		return true
 	}
-	q := u.Query()
-	q.Set("auth", result)
-	u.RawQuery = q.Encode()
-	c.Redirect(http.StatusFound, u.String())
+	u, err := url.Parse(webApp)
+	if err != nil || u.Host == "" {
+		return true
+	}
+	reqHost := r.Host
+	if h := r.Header.Get("X-Forwarded-Host"); h != "" {
+		reqHost = h
+	}
+	return strings.EqualFold(u.Host, reqHost)
 }
 
 func toAPI(acc account.Account) api.Account {
