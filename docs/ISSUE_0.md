@@ -1,3 +1,6 @@
+> Histórico do bootstrap (`gmh seed`). Movido de `.github/ISSUE_0.md`
+> para não competir com os issue forms YAML. Spec de produto: `docs/SPEC.md`.
+
 ## Issue 0 — specification that starts the loop
 
 This issue is the **principal** of the first delivery cycle.
