@@ -17,14 +17,15 @@
     "es": "Español"
   },
   "a11y": {
-    "color_mode": "Cambiar tema"
+    "color_mode": "Cambiar tema",
+    "logo": "Inicio Canteiro"
   },
   "landing": {
     "hero": {
-      "badge": "canteiro.brenon.cloud",
+      "badge": "Alquiler de herramientas entre personas",
       "title": "Herramienta parada, obra en marcha",
       "tagline": "Publica lo que está ocioso. Alquila lo que falta. Fianza y pago quedan en la plataforma.",
-      "cta": "Ver lo que viene"
+      "cta": "Buscar en el catálogo"
     },
     "highlights": {
       "title": "Un marketplace, tres roles",
@@ -41,9 +42,12 @@
         "desc": "Orquestamos el pago, retenemos la fianza y mediamos averías."
       }
     },
-    "soon": {
-      "title": "En construcción",
-      "body": "El catálogo y las reservas llegan en entregas posteriores. Esta es la dirección pública del producto."
+    "market": {
+      "title": "En el patio ahora",
+      "empty_title": "El patio está abierto",
+      "empty_body": "Busca anuncios publicados o publica una máquina. Pago y fianza quedan en la plataforma.",
+      "view_all": "Ver todos los anuncios",
+      "publish": "Publicar equipo"
     }
   },
   "footer": {
@@ -75,7 +79,10 @@
       "description": "Usa tu cuenta de Google. Sin Google no hay registro en v1.",
       "google": "Entrar con Google",
       "google_only": "En v1 la identidad es solo Google. No hay contraseña de la plataforma.",
-      "catalog_hint": "Puedes consultar el catálogo público sin entrar."
+      "catalog_hint": "Puedes consultar el catálogo público sin entrar.",
+      "unavailable_title": "Entrar con Google no está disponible",
+      "unavailable_body": "Aún puedes consultar el catálogo público. La cuenta de Google solo se pide para reservar o publicar.",
+      "browse_catalog": "Ver catálogo"
     },
     "callback": {
       "working": "Validando tu identidad de Google…",
@@ -176,7 +183,7 @@
       "description": "Descripción",
       "unavailable": "No disponible en estos períodos",
       "unavailable_empty": "Sin bloqueos declarados por el dueño por ahora.",
-      "identity_note": "La identidad y el contacto solo aparecen tras aceptar la reserva (próxima fase)."
+      "identity_note": "La identidad y el contacto solo aparecen tras aceptar la reserva."
     },
     "owner": {
       "title": "Mis anuncios",

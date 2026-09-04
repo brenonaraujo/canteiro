@@ -17,14 +17,15 @@
     "es": "Español"
   },
   "a11y": {
-    "color_mode": "Alternar tema"
+    "color_mode": "Alternar tema",
+    "logo": "Início Canteiro"
   },
   "landing": {
     "hero": {
-      "badge": "canteiro.brenon.cloud",
+      "badge": "Aluguel de ferramentas entre pessoas",
       "title": "Ferramenta parada vira obra andando",
       "tagline": "Publique o que está ocioso. Alugue o que falta. Caução e pagamento ficam na plataforma.",
-      "cta": "Ver o que vem aí"
+      "cta": "Buscar no catálogo"
     },
     "highlights": {
       "title": "Um marketplace, três papéis",
@@ -41,9 +42,12 @@
         "desc": "Orquestramos o pagamento, seguramos a caução e mediamos avaria."
       }
     },
-    "soon": {
-      "title": "Em construção",
-      "body": "O catálogo e as reservas vêm nas próximas entregas. Este é o endereço público do produto."
+    "market": {
+      "title": "No pátio agora",
+      "empty_title": "O pátio está aberto",
+      "empty_body": "Busque anúncios publicados ou anuncie uma máquina. Pagamento e caução ficam na plataforma.",
+      "view_all": "Ver todos os anúncios",
+      "publish": "Anunciar equipamento"
     }
   },
   "footer": {
@@ -75,7 +79,10 @@
       "description": "Use sua conta Google. Sem Google não há cadastro no v1.",
       "google": "Entrar com Google",
       "google_only": "No v1 a identidade é só Google. Não usamos senha da plataforma.",
-      "catalog_hint": "Você pode consultar o catálogo público sem entrar."
+      "catalog_hint": "Você pode consultar o catálogo público sem entrar.",
+      "unavailable_title": "Entrar com Google está indisponível",
+      "unavailable_body": "Você ainda pode consultar o catálogo público. A conta Google só é pedida para reservar ou publicar.",
+      "browse_catalog": "Ver catálogo"
     },
     "callback": {
       "working": "Validando sua identidade Google…",
@@ -176,7 +183,7 @@
       "description": "Descrição",
       "unavailable": "Indisponível nestes períodos",
       "unavailable_empty": "Sem bloqueios declarados pelo dono neste momento.",
-      "identity_note": "Identidade e contato só aparecem após a reserva aceita (próxima fase)."
+      "identity_note": "Identidade e contato só aparecem após a reserva aceita."
     },
     "owner": {
       "title": "Meus anúncios",

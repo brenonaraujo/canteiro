@@ -38,7 +38,8 @@ const label = computed(() => {
     <UButton
       v-if="!isAuthenticated"
       to="/auth/login"
-      color="primary"
+      color="neutral"
+      variant="outline"
       size="md"
       class="min-h-11"
     >

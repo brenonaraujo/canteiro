@@ -4,12 +4,17 @@ import { useAuth } from '~/composables/auth/useAuth'
 defineOptions({ name: 'AuthLoginPage' })
 
 const { t } = useI18n()
+const route = useRoute()
 const { startGoogle, errorKey, pending } = useAuth()
 
 const crumbs = computed(() => [
   { label: t('breadcrumb.home'), to: '/' },
   { label: t('breadcrumb.sign_in') }
 ])
+
+const googleUnavailable = computed(() => {
+  return route.query.error === 'not_configured'
+})
 </script>
 
 <template>
@@ -30,6 +35,15 @@ const crumbs = computed(() => [
             :title="t(errorKey)"
           />
           <UAlert
+            v-else-if="googleUnavailable"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-circle-alert"
+            :title="t('auth.login.unavailable_title')"
+            :description="t('auth.login.unavailable_body')"
+          />
+          <UAlert
+            v-else
             color="neutral"
             variant="subtle"
             icon="i-lucide-info"
@@ -51,12 +65,12 @@ const crumbs = computed(() => [
             {{ t('auth.login.catalog_hint') }}
           </p>
           <UButton
-            to="/"
+            to="/listings"
             color="neutral"
-            variant="ghost"
+            variant="outline"
             class="min-h-11"
           >
-            {{ t('nav.home') }}
+            {{ t('auth.login.browse_catalog') }}
           </UButton>
         </div>
       </UPageCard>
