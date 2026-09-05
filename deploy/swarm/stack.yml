@@ -1,8 +1,12 @@
 version: "3.9"
 
 # Public origin: Cloudflare tunnel canteiro.brenon.cloud → 192.168.1.101:18083
-# (explicit hostname ABOVE wildcard *.brenon.cloud → haas-edge). Do not CNAME
-# this host to api.brenon.cloud. Kong /canteiro (key-auth) stays LAN-only.
+# (explicit hostname ABOVE wildcard *.brenon.cloud → haas-edge). Ingress mesh
+# reaches the edge task on vserver (fedora). Do not CNAME this host to
+# api.brenon.cloud. Kong /canteiro (key-auth) stays LAN-only.
+#
+# F9: restart_policy.condition=any so a clean SIGTERM/node bounce reschedules.
+# on-failure + exit 0 leaves the public host on Cloudflare 502/530/1033.
 
 services:
   canteiro:
@@ -44,11 +48,13 @@ services:
     deploy:
       replicas: 1
       placement:
-        constraints: [node.role == manager]
+        constraints: [node.labels.vserver == true]
       resources:
         limits: { memory: 512M, cpus: "0.5" }
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
+        max_attempts: 0
 
   web:
     image: ghcr.io/brenonaraujo/canteiro-web:${SERVICE_TAG:-latest}
@@ -71,11 +77,13 @@ services:
     deploy:
       replicas: 1
       placement:
-        constraints: [node.role == manager]
+        constraints: [node.labels.vserver == true]
       resources:
         limits: { memory: 512M, cpus: "0.5" }
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
+        max_attempts: 0
 
   edge:
     image: nginx:1.27-alpine
@@ -205,11 +213,13 @@ services:
     deploy:
       replicas: 1
       placement:
-        constraints: [node.role == manager]
+        constraints: [node.labels.vserver == true]
       resources:
         limits: { memory: 64M, cpus: "0.25" }
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
+        max_attempts: 0
 
   postgres:
     image: postgres:18.4-alpine
@@ -233,6 +243,10 @@ services:
         constraints: [node.role == manager]
       resources:
         limits: { memory: 512M, cpus: "0.5" }
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
 
   migrate:
     image: migrate/migrate:v4.19.1
@@ -253,7 +267,7 @@ services:
     deploy:
       replicas: 1
       placement:
-        constraints: [node.role == manager]
+        constraints: [node.labels.vserver == true]
       restart_policy:
         condition: none
 

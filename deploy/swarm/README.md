@@ -12,6 +12,10 @@ Public product host: `https://canteiro.brenon.cloud`
 | `postgres` | `postgres:18.4-alpine` | :5432 | DB |
 | `migrate` | `migrate/migrate:v4.19.1` | one-shot | SQL up |
 
+Placement: `canteiro` / `web` / `edge` / `migrate` on `node.labels.vserver == true` (fedora). `postgres` stays on the manager (volume). Tunnel origin remains `http://192.168.1.101:18083` via Swarm ingress mesh.
+
+Restart: `condition: any` on long-running processes (not `on-failure`). A clean SIGTERM / node bounce with `on-failure` never reschedules — public host then returns Cloudflare **502 / 530 / error 1033**. `migrate` stays `none`.
+
 Kong path `https://api.brenon.cloud/canteiro` (key-auth) stays LAN/server-to-server. This stack does **not** change that plugin.
 
 ## Tunnel (already published)
@@ -64,13 +68,24 @@ OAuth client (Google Cloud → Web application):
 
 ### Smoke
 
+Use **GET**, not `curl -I` / HEAD. Smoke only counts on the public HTTPS host.
+
 ```bash
-curl -sS https://canteiro.brenon.cloud/healthz    # 200 even without Google
-curl -sS https://canteiro.brenon.cloud/readyz     # 200 even without Google
+curl -sS -A 'Mozilla/5.0' -o /dev/null -w '%{http_code} %{content_type}\n' https://canteiro.brenon.cloud/
+# 200 text/html — title Canteiro (not CF 502/530/1033)
+
+curl -sS -A 'Mozilla/5.0' https://canteiro.brenon.cloud/healthz
+# 200 {"service":"canteiro","status":"ok"}
+
+curl -sS -A 'Mozilla/5.0' https://canteiro.brenon.cloud/catalog/listings
+# 200 application/json (same-origin API, not CF HTML)
+
 curl -sSI --max-redirs 0 https://canteiro.brenon.cloud/auth/google
 # with backing: 302 Location https://accounts.google.com/o/oauth2/v2/auth?...
 # without:      503 JSON not_configured (SPA must show auth.not_configured)
 ```
+
+Cloudflare **1033** = tunnel connector down (`cloudflared-tunnel` Swarm service), not a missing DNS CNAME. **502/530** with the connector up = origin `:18083` unreachable (dead edge task or broken ingress mesh). Do not CNAME this host to `api.brenon.cloud`.
 
 Rollback of the backing: remove `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from Portainer stack env and update the stack. `/healthz` stays 200; login start returns 503 again.
 
