@@ -12,7 +12,7 @@ Public product host: `https://canteiro.brenon.cloud`
 | `postgres` | `postgres:18.4-alpine` | :5432 | DB |
 | `migrate` | `migrate/migrate:v4.19.1` | one-shot | SQL up |
 
-Placement: `canteiro` / `web` / `edge` / `migrate` on `node.labels.vserver == true` (fedora). `postgres` stays on the manager (volume). Tunnel origin remains `http://192.168.1.101:18083` via Swarm ingress mesh.
+Placement: `canteiro` / `web` / `edge` are **not** pinned to `node.labels.vserver`. Ingress publishes `:18083` on the mesh (manager `192.168.1.101`); the task can run on any ready node. Pinning HTTP origin to fedora left replacement tasks **Pending** for ~2h while that worker was down (2026-09-05 #34, CF 502). `postgres` stays on the manager (volume). `migrate` remains a one-shot (`restart: none`); its bind of `./backend/migrations` is Portainer-host-path and may reject — not on the public request path.
 
 Restart: `condition: any` on long-running processes (not `on-failure`). A clean SIGTERM / node bounce with `on-failure` never reschedules — public host then returns Cloudflare **502 / 530 / error 1033**. `migrate` stays `none`.
 
@@ -85,7 +85,7 @@ curl -sSI --max-redirs 0 https://canteiro.brenon.cloud/auth/google
 # without:      503 JSON not_configured (SPA must show auth.not_configured)
 ```
 
-Cloudflare **1033** = tunnel connector down (`cloudflared-tunnel` Swarm service), not a missing DNS CNAME. **502/530** with the connector up = origin `:18083` unreachable (dead edge task or broken ingress mesh). Do not CNAME this host to `api.brenon.cloud`.
+Cloudflare **1033** = tunnel connector down (`cloudflared-tunnel` is **global**; one node bounce is not enough). **502/530** with connectors up = origin `:18083` unreachable (dead edge task, Pending replacement, or broken ingress mesh). A vserver-only constraint + fedora down looks exactly like 502 while `cloudflared` on home101/server102 stays healthy. Do not CNAME this host to `api.brenon.cloud`.
 
 Rollback of the backing: remove `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from Portainer stack env and update the stack. `/healthz` stays 200; login start returns 503 again.
 

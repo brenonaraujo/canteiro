@@ -2,11 +2,15 @@ version: "3.9"
 
 # Public origin: Cloudflare tunnel canteiro.brenon.cloud → 192.168.1.101:18083
 # (explicit hostname ABOVE wildcard *.brenon.cloud → haas-edge). Ingress mesh
-# reaches the edge task on vserver (fedora). Do not CNAME this host to
-# api.brenon.cloud. Kong /canteiro (key-auth) stays LAN-only.
+# publishes :18083 on every node; the edge task may run on any ready node.
+# Do not pin HTTP origin to node.labels.vserver — when fedora is down, that
+# constraint leaves replacement tasks Pending and the public host on CF 502
+# (2026-09-05 #34: ~18:02–20:16Z). Do not CNAME this host to api.brenon.cloud.
+# Kong /canteiro (key-auth) stays LAN-only.
 #
 # F9: restart_policy.condition=any so a clean SIGTERM/node bounce reschedules.
 # on-failure + exit 0 leaves the public host on Cloudflare 502/530/1033.
+# postgres stays on the manager (named volume).
 
 services:
   canteiro:
@@ -47,8 +51,6 @@ services:
       start_period: 30s
     deploy:
       replicas: 1
-      placement:
-        constraints: [node.labels.vserver == true]
       resources:
         limits: { memory: 512M, cpus: "0.5" }
       restart_policy:
@@ -76,8 +78,6 @@ services:
       start_period: 40s
     deploy:
       replicas: 1
-      placement:
-        constraints: [node.labels.vserver == true]
       resources:
         limits: { memory: 512M, cpus: "0.5" }
       restart_policy:
@@ -212,8 +212,6 @@ services:
       start_period: 40s
     deploy:
       replicas: 1
-      placement:
-        constraints: [node.labels.vserver == true]
       resources:
         limits: { memory: 64M, cpus: "0.25" }
       restart_policy:
@@ -250,12 +248,10 @@ services:
 
   migrate:
     image: migrate/migrate:v4.19.1
-    restart: "no"
     networks:
       - canteiro
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     volumes:
       - ./backend/migrations:/migrations:ro
     command:
